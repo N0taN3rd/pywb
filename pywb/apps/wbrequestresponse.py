@@ -73,10 +73,12 @@ class WbResponse(object):
         # to conform to cors negotiation, the HTTP headers
         # are only nicely accessible by wrapping environment in werkzeug.wrappers.Request
         head = Request(environ).headers
-        print('serving options', head)
+        allowed_meth = 'GET,HEAD,POST,OPTIONS,CONNECT'
+        if head.get('Method') not in allowed_meth:
+            allowed_meth += ',%s' % head.get('Method')
         opts_headers = [
             ('Access-Control-Allow-Origin', head.get('Origin', '*')),  # origin will always be set but....
-            ('Access-Control-Allow-Methods', 'GET,HEAD,POST,OPTIONS,CONNECT'),  # the bare essentials
+            ('Access-Control-Allow-Methods', allowed_meth)  # the bare essentials
         ]
         acrh = head.get('Access-Control-Request-Headers', None)
         if acrh is not None:
