@@ -73,7 +73,7 @@ class WbResponse(object):
         """
         def_headers = [('Content-Type', content_type)]
         if headers:
-            def_headers += headers
+            def_headers.extend(headers)
 
         status_headers = StatusAndHeaders(status, def_headers)
 
@@ -120,7 +120,7 @@ class WbResponse(object):
         """
         redir_headers = [('Location', location), ('Content-Length', '0')]
         if headers:
-            redir_headers += headers
+            redir_headers.extend(headers)
 
         return WbResponse(StatusAndHeaders(status, redir_headers))
 
@@ -189,7 +189,7 @@ class WbResponse(object):
             allowed_origin = env.get('HTTP_ORIGIN', env.get('HTTP_REFERER', allowed_origin))
         if allowed_origin is None:
             allowed_origin = '*'
-        self.status_headers.replace_header('Access-Control-Allow-Origin',  allowed_origin)
+        self.status_headers.replace_header('Access-Control-Allow-Origin', allowed_origin)
         self.status_headers.add_header('Access-Control-Allow-Methods', allowed_methods)
         self.status_headers.add_header('Access-Control-Allow-Credentials', 'true')
         self.status_headers.add_header('Access-Control-Max-Age', '1800')

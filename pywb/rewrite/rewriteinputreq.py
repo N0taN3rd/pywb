@@ -6,7 +6,7 @@ from six.moves.urllib.parse import urlsplit
 import re
 
 
-#=============================================================================
+# =============================================================================
 class RewriteInputRequest(DirectWSGIInputRequest):
     RANGE_ARG_RX = re.compile('.*.googlevideo.com/videoplayback.*([&?]range=(\d+)-(\d+))')
 
@@ -32,7 +32,7 @@ class RewriteInputRequest(DirectWSGIInputRequest):
             uri = '/'
 
         if self.splits.query:
-            uri += '?' + self.splits.query
+            return uri + '?' + self.splits.query
 
         return uri
 
@@ -131,4 +131,3 @@ class RewriteInputRequest(DirectWSGIInputRequest):
 
         result = (url, start, end, use_206)
         return result
-

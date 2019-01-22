@@ -5,35 +5,37 @@ from pywb.utils.memento import MementoUtils
 from warcio.recordloader import ArchiveLoadFailed
 
 from pywb.warcserver.index.fuzzymatcher import FuzzyMatcher
-from pywb.warcserver.resource.responseloader import  WARCPathLoader, LiveWebLoader, VideoLoader
+from pywb.warcserver.resource.responseloader import WARCPathLoader, LiveWebLoader, VideoLoader
 
 import six
 import logging
 import traceback
 
-
 logger = logging.getLogger('warcserver')
 
 
-#=============================================================================
+# =============================================================================
 def to_cdxj(cdx_iter, fields):
     content_type = 'text/x-cdxj'
     return content_type, (cdx.to_cdxj(fields) for cdx in cdx_iter)
+
 
 def to_json(cdx_iter, fields):
     content_type = 'text/x-ndjson'
     return content_type, (cdx.to_json(fields) for cdx in cdx_iter)
 
+
 def to_text(cdx_iter, fields):
     content_type = 'text/plain'
     return content_type, (cdx.to_text(fields) for cdx in cdx_iter)
+
 
 def to_link(cdx_iter, fields):
     content_type = 'application/link-format'
     return content_type, MementoUtils.make_timemap(cdx_iter)
 
 
-#=============================================================================
+# =============================================================================
 class IndexHandler(object):
     OUTPUTS = {
         'cdxj': to_cdxj,
@@ -90,16 +92,16 @@ class IndexHandler(object):
         content_type, res = handler(cdx_iter, fields)
         out_headers = {'Content-Type': content_type}
 
-        def check_str(lines):
-            for line in lines:
-                if isinstance(line, six.text_type):
-                    line = line.encode('utf-8')
-                yield line
+        return out_headers, self._check_str(res), errs
 
-        return out_headers, check_str(res), errs
+    def _check_str(self, lines):
+        for line in lines:
+            if isinstance(line, six.text_type):
+                line = line.encode('utf-8')
+            yield line
 
 
-#=============================================================================
+# =============================================================================
 class ResourceHandler(IndexHandler):
     def __init__(self, index_source, resource_loaders, rules_file=None):
         super(ResourceHandler, self).__init__(index_source, rules_file=rules_file)
@@ -138,19 +140,19 @@ class ResourceHandler(IndexHandler):
         return None, None, errs
 
 
-#=============================================================================
+# =============================================================================
 class DefaultResourceHandler(ResourceHandler):
     def __init__(self, index_source, warc_paths='', forward_proxy_prefix='',
                  rules_file=''):
         loaders = [WARCPathLoader(warc_paths, index_source),
                    LiveWebLoader(forward_proxy_prefix),
                    VideoLoader()
-                  ]
+                   ]
         super(DefaultResourceHandler, self).__init__(index_source, loaders,
                                                      rules_file=rules_file)
 
 
-#=============================================================================
+# =============================================================================
 class HandlerSeq(object):
     def __init__(self, handlers):
         self.handlers = handlers
@@ -170,5 +172,3 @@ class HandlerSeq(object):
                 return out_headers, res, all_errs
 
         return None, None, all_errs
-
-

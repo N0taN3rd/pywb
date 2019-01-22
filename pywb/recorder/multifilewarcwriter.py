@@ -85,7 +85,7 @@ class MultiFileWARCWriter(BaseWARCWriter):
 
         try:
             os.makedirs(path)
-        except:
+        except Exception:
             pass
 
         fh = open(filename, 'a+b')
@@ -152,8 +152,8 @@ class MultiFileWARCWriter(BaseWARCWriter):
             return
 
         def write_callback(out, filename):
-            #url = resp.rec_headers.get_header('WARC-Target-URI')
-            #print('Writing req/resp {0} to {1} '.format(url, filename))
+            # url = resp.rec_headers.get_header('WARC-Target-URI')
+            # print('Writing req/resp {0} to {1} '.format(url, filename))
             self._write_warc_record(out, resp)
 
             if req and self._is_write_req(req, params):
@@ -163,7 +163,7 @@ class MultiFileWARCWriter(BaseWARCWriter):
 
     def write_stream_to_file(self, params, stream):
         def write_callback(out, filename):
-            #print('Writing stream to {0}'.format(filename))
+            # print('Writing stream to {0}'.format(filename))
             shutil.copyfileobj(stream, out)
 
         return self._write_to_file(params, write_callback)
@@ -249,7 +249,7 @@ class MultiFileWARCWriter(BaseWARCWriter):
         for dir_key, out, filename in self.iter_open_files():
             try:
                 mtime = os.path.getmtime(filename)
-            except:
+            except Exception:
                 self.close_key(dir_key)
                 return
 
@@ -265,4 +265,3 @@ class PerRecordWARCWriter(MultiFileWARCWriter):
     def __init__(self, *args, **kwargs):
         kwargs['max_size'] = 1
         super(PerRecordWARCWriter, self).__init__(*args, **kwargs)
-

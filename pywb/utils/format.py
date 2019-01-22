@@ -81,5 +81,3 @@ def query_to_dict(query_str, multi=None):
             obj[n] = [obj[n], v]
 
     return obj
-
-

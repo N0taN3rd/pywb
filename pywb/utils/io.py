@@ -6,7 +6,7 @@ from warcio.limitreader import LimitReader
 from tempfile import SpooledTemporaryFile
 
 
-#=============================================================================
+# =============================================================================
 def StreamIter(stream, header1=None, header2=None, size=BUFF_SIZE, closer=closing):
     with closer(stream):
         if header1:
@@ -22,7 +22,7 @@ def StreamIter(stream, header1=None, header2=None, size=BUFF_SIZE, closer=closin
             yield buff
 
 
-#=============================================================================
+# =============================================================================
 @contextmanager
 def call_release_conn(stream):
     try:
@@ -34,7 +34,7 @@ def call_release_conn(stream):
             stream.close()
 
 
-#=============================================================================
+# =============================================================================
 def chunk_encode_iter(orig_iter):
     for chunk in orig_iter:
         if not len(chunk):
@@ -47,7 +47,7 @@ def chunk_encode_iter(orig_iter):
     yield b'0\r\n\r\n'
 
 
-#=============================================================================
+# =============================================================================
 def buffer_iter(status_headers, iterator, buff_size=BUFF_SIZE * 4):
     out = SpooledTemporaryFile(buff_size)
     size = 0
@@ -65,7 +65,7 @@ def buffer_iter(status_headers, iterator, buff_size=BUFF_SIZE * 4):
     return StreamIter(out)
 
 
-#=============================================================================
+# =============================================================================
 def compress_gzip_iter(orig_iter):
     compressobj = zlib.compressobj(9, zlib.DEFLATED, zlib.MAX_WBITS + 16)
     for chunk in orig_iter:
@@ -101,4 +101,3 @@ class OffsetLimitReader(LimitReader):
     def readline(self, length=None):
         self._skip()
         return super(OffsetLimitReader, self).readline(length)
-

@@ -4,7 +4,7 @@ from pywb.rewrite.wburl import WbUrl
 from pywb.rewrite.cookie_rewriter import get_cookie_rewriter
 
 
-#=================================================================
+# =================================================================
 class UrlRewriter(object):
     """
     Main pywb UrlRewriter which rewrites absolute and relative urls
@@ -46,13 +46,13 @@ class UrlRewriter(object):
             return url
 
         if (self.prefix and
-             self.prefix != '/' and
-             url.startswith(self.prefix)):
+                self.prefix != '/' and
+                url.startswith(self.prefix)):
             return url
 
         if (self.full_prefix and
-             self.full_prefix != self.prefix and
-             url.startswith(self.full_prefix)):
+                self.full_prefix != self.prefix and
+                url.startswith(self.full_prefix)):
             return url
 
         wburl = self.wburl
@@ -69,9 +69,9 @@ class UrlRewriter(object):
             return url
 
             # if prefix starts with a scheme
-            #if self.prefix_scheme:
+            # if self.prefix_scheme:
             #    url = self.prefix_scheme + ':' + url
-            #url = 'http:' + url
+            # url = 'http:' + url
 
         # optimize: join if not absolute url, otherwise just use as is
         if not is_abs:
@@ -86,9 +86,10 @@ class UrlRewriter(object):
 
         if not is_abs and self.prefix_abs and not self.rewrite_opts.get('no_match_rel'):
             parts = final_url.split('/', 3)
-            final_url = '/'
             if len(parts) == 4:
-                final_url += parts[3]
+                final_url = '/' + parts[3]
+            else:
+                final_url = '/'
 
         # experiment for setting scheme rel url
         elif scheme_rel and self.prefix_abs:
@@ -160,11 +161,12 @@ class UrlRewriter(object):
         return new_url
 
 
-#=================================================================
+# =================================================================
 class IdentityUrlRewriter(UrlRewriter):
     """
     No rewriting performed, return original url
     """
+
     def rewrite(self, url, mod=None, force_abs=False):
         return url
 
@@ -181,7 +183,7 @@ class IdentityUrlRewriter(UrlRewriter):
         return self.wburl.url
 
 
-#=================================================================
+# =================================================================
 class SchemeOnlyUrlRewriter(IdentityUrlRewriter):
     """
     A url rewriter which ensures that any urls have the same
@@ -202,4 +204,3 @@ class SchemeOnlyUrlRewriter(IdentityUrlRewriter):
             url = self.url_scheme + url[len(self.opposite_scheme):]
 
         return url
-

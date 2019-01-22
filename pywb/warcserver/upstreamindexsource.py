@@ -8,7 +8,7 @@ from pywb.warcserver.resource.responseloader import LiveWebLoader
 from pywb.utils.format import ParamFormatter, res_template
 
 
-#=============================================================================
+# =============================================================================
 class UpstreamAggIndexSource(RemoteIndexSource):
     def __init__(self, base_url):
         api_url = base_url + '/index?url={url}'
@@ -21,7 +21,7 @@ class UpstreamAggIndexSource(RemoteIndexSource):
         cdx.pop('load_url', '')
 
 
-#=============================================================================
+# =============================================================================
 class UpstreamMementoIndexSource(BaseIndexSource):
     def __init__(self, proxy_url='{url}'):
         self.proxy_url = proxy_url
@@ -47,10 +47,8 @@ class UpstreamMementoIndexSource(BaseIndexSource):
         yield cdx
 
     def __str__(self):
-        return 'upstream'
+        return 'UpstreamMementoIndexSource'
 
     @staticmethod
     def upstream_resource(base_url):
         return UpstreamMementoIndexSource(base_url + '/resource?url={url}&closest={closest}')
-
-

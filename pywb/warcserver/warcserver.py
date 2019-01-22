@@ -1,3 +1,4 @@
+import traceback
 from pywb.utils.loaders import load_yaml_config, load_overlay_config
 
 from pywb.warcserver.basewarcserver import BaseWarcServer
@@ -18,7 +19,6 @@ from six import iteritems, iterkeys, itervalues
 from six.moves import zip
 import os
 
-
 SOURCE_LIST = [LiveIndexSource,
                WBMementoIndexSource,
                RedisMultiKeyIndexSource,
@@ -27,7 +27,7 @@ SOURCE_LIST = [LiveIndexSource,
                FileIndexSource,
                RemoteIndexSource,
                ZipNumIndexSource,
-              ]
+               ]
 
 
 # ============================================================================
@@ -76,20 +76,20 @@ class WarcServer(BaseWarcServer):
         if self.auto_handler:
             self.add_route('/<path_param_value>', self.auto_handler, path_param_name='param.coll')
 
+    def _get_full_path(self, path, abs_path):
+        if '://' not in path:
+            path = os.path.join(self.AUTO_COLL_TEMPL, path, '')
+            if abs_path:
+                path = os.path.join(abs_path, path)
+        return path
+
     def init_paths(self, name, abs_path=None):
         templ = self.config.get(name)
 
-        def get_full_path(path):
-            if '://' not in path:
-                path = os.path.join(self.AUTO_COLL_TEMPL, path, '')
-                if abs_path:
-                    path = os.path.join(abs_path, path)
-            return path
-
         if isinstance(templ, str):
-            return get_full_path(templ)
+            return self._get_full_path(templ, abs_path)
         else:
-            return [get_full_path(t) for t in templ]
+            return [self._get_full_path(t, abs_path) for t in templ]
 
     def load_auto_colls(self):
         if not self.root_dir:
@@ -113,7 +113,7 @@ class WarcServer(BaseWarcServer):
 
         res = colls.get(name, {})
         if not isinstance(res, dict):
-            res = {'index': res}
+            return {'index': res}
         return res
 
     def list_dynamic_routes(self):
@@ -135,10 +135,9 @@ class WarcServer(BaseWarcServer):
         for name, coll_config in iteritems(colls):
             try:
                 handler = self.load_coll(name, coll_config)
-            except:
+            except Exception:
                 print('Invalid Collection: ' + name)
                 if self.debug:
-                    import traceback
                     traceback.print_exc()
                 continue
 
@@ -202,6 +201,7 @@ class WarcServer(BaseWarcServer):
 
         return HandlerSeq(handlers)
 
+
 # ============================================================================
 def init_index_source(value, source_list=None):
     source_list = source_list or SOURCE_LIST
@@ -241,5 +241,3 @@ def init_index_agg(source_configs, use_gevent=False, timeout=0, source_list=None
         return GeventTimeoutAggregator(sources, timeout=timeout)
     else:
         return SimpleAggregator(sources)
-
-

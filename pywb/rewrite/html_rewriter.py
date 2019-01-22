@@ -7,7 +7,6 @@ import sys
 from six.moves.html_parser import HTMLParser
 from six.moves.urllib.parse import urljoin, urlsplit, urlunsplit
 
-
 from pywb.rewrite.url_rewriter import UrlRewriter
 from pywb.rewrite.regex_rewriters import JSRewriter, CSSRewriter
 
@@ -24,7 +23,19 @@ except:
 from six import text_type
 
 
-#=================================================================
+# ===========================
+class AccumBuff:
+    def __init__(self):
+        self.ls = []
+
+    def write(self, string):
+        self.ls.append(string)
+
+    def getvalue(self):
+        return ''.join(self.ls)
+
+
+# =================================================================
 class HTMLRewriterMixin(StreamingRewriter):
     """
     HTML-Parsing Rewriter for custom rewriting, also delegates
@@ -34,39 +45,39 @@ class HTMLRewriterMixin(StreamingRewriter):
     @staticmethod
     def _init_rewrite_tags(defmod):
         rewrite_tags = {
-            'a':       {'href': defmod},
-            'applet':  {'codebase': 'oe_',
-                        'archive': 'oe_'},
-            'area':    {'href': defmod},
-            'audio':   {'src': 'oe_'},
-            'base':    {'href': defmod},
+            'a': {'href': defmod},
+            'applet': {'codebase': 'oe_',
+                       'archive': 'oe_'},
+            'area': {'href': defmod},
+            'audio': {'src': 'oe_'},
+            'base': {'href': defmod},
             'blockquote': {'cite': defmod},
-            'body':    {'background': 'im_'},
-            'button':  {'formaction': defmod},
+            'body': {'background': 'im_'},
+            'button': {'formaction': defmod},
             'command': {'icon': 'im_'},
-            'del':     {'cite': defmod},
-            'embed':   {'src': 'oe_'},
-            'head':    {'': defmod},  # for head rewriting
-            'iframe':  {'src': 'if_'},
-            'image':   {'src': 'im_', 'xlink:href': 'im_'},
-            'img':     {'src': 'im_',
-                        'srcset': 'im_'},
-            'ins':     {'cite': defmod},
-            'input':   {'src': 'im_',
-                        'formaction': defmod},
-            'form':    {'action': defmod},
-            'frame':   {'src': 'fr_'},
-            'link':    {'href': 'oe_'},
-            'meta':    {'content': defmod},
-            'object':  {'codebase': 'oe_',
-                        'data': 'oe_'},
-            'param':   {'value': 'oe_'},
-            'q':       {'cite': defmod},
-            'ref':     {'href': 'oe_'},
-            'script':  {'src': 'js_', 'xlink:href': 'js_'},  # covers both HTML and SVG script tags
-            'source':  {'src': 'oe_'},
-            'video':   {'src': 'oe_',
-                        'poster': 'im_'},
+            'del': {'cite': defmod},
+            'embed': {'src': 'oe_'},
+            'head': {'': defmod},  # for head rewriting
+            'iframe': {'src': 'if_'},
+            'image': {'src': 'im_', 'xlink:href': 'im_'},
+            'img': {'src': 'im_',
+                    'srcset': 'im_'},
+            'ins': {'cite': defmod},
+            'input': {'src': 'im_',
+                      'formaction': defmod},
+            'form': {'action': defmod},
+            'frame': {'src': 'fr_'},
+            'link': {'href': 'oe_'},
+            'meta': {'content': defmod},
+            'object': {'codebase': 'oe_',
+                       'data': 'oe_'},
+            'param': {'value': 'oe_'},
+            'q': {'cite': defmod},
+            'ref': {'href': 'oe_'},
+            'script': {'src': 'js_', 'xlink:href': 'js_'},  # covers both HTML and SVG script tags
+            'source': {'src': 'oe_'},
+            'video': {'src': 'oe_',
+                      'poster': 'im_'},
         }
 
         return rewrite_tags
@@ -94,18 +105,6 @@ class HTMLRewriterMixin(StreamingRewriter):
         'track': 'oe_',
     }
 
-    #===========================
-    class AccumBuff:
-        def __init__(self):
-            self.ls = []
-
-        def write(self, string):
-            self.ls.append(string)
-
-        def getvalue(self):
-            return ''.join(self.ls)
-
-
     # ===========================
     def __init__(self, url_rewriter,
                  head_insert=None,
@@ -113,7 +112,7 @@ class HTMLRewriterMixin(StreamingRewriter):
                  js_rewriter=None,
                  css_rewriter=None,
                  css_rewriter_class=None,
-                 url = '',
+                 url='',
                  defmod='',
                  parse_comments=False,
                  charset='utf-8'):
@@ -231,7 +230,6 @@ class HTMLRewriterMixin(StreamingRewriter):
         if not value:
             return ''
 
-
         orig_value = value
 
         # if not utf-8, then stream was encoded as iso-8859-1, and need to reencode
@@ -239,7 +237,7 @@ class HTMLRewriterMixin(StreamingRewriter):
         if self.charset != 'utf-8' and self.charset != 'iso-8859-1':
             try:
                 value = value.encode('iso-8859-1').decode(self.charset)
-            except:
+            except Exception:
                 pass
 
         unesc_value = self.try_unescape(value)
@@ -328,8 +326,8 @@ class HTMLRewriterMixin(StreamingRewriter):
         """
         # special case: head insertion, before-head tags
         if (self.head_insert and
-              not self._wb_parse_context
-              and (tag not in self.BEFORE_HEAD_TAGS)):
+                not self._wb_parse_context
+                and (tag not in self.BEFORE_HEAD_TAGS)):
             self.out.write(self.head_insert)
             self.head_insert = None
 
@@ -351,7 +349,7 @@ class HTMLRewriterMixin(StreamingRewriter):
 
             # special case: inline JS/event handler
             if ((attr_value and attr_value.startswith('javascript:'))
-                 or attr_name.startswith('on') and attr_name[2:3] != '-'):
+                    or attr_name.startswith('on') and attr_name[2:3] != '-'):
                 attr_value = self._rewrite_script(attr_value, True)
 
             # special case: inline CSS/style attribute
@@ -392,7 +390,7 @@ class HTMLRewriterMixin(StreamingRewriter):
                     attr_value = self._rewrite_url(attr_value, rw_mod)
 
             # special case: param value, conditional rewrite
-            elif (tag == 'param'):
+            elif tag == 'param':
                 if attr_value.startswith(self.DATA_RW_PROTOCOLS):
                     rw_mod = handler.get(attr_name)
                     attr_value = self._rewrite_url(attr_value, rw_mod)
@@ -526,7 +524,7 @@ class HTMLRewriterMixin(StreamingRewriter):
         self.out.write(data)
 
     def rewrite(self, string):
-        self.out = self.AccumBuff()
+        self.out = AccumBuff()
 
         self.feed(string)
 
@@ -545,7 +543,7 @@ class HTMLRewriterMixin(StreamingRewriter):
         return result
 
     def final_read(self):
-        self.out = self.AccumBuff()
+        self.out = AccumBuff()
 
         self._internal_close()
 
@@ -563,14 +561,14 @@ class HTMLRewriterMixin(StreamingRewriter):
         raise NotImplementedError('Base method')
 
 
-#=================================================================
+# =================================================================
 class HTMLRewriter(HTMLRewriterMixin, HTMLParser):
     PARSETAG = re.compile('[<]')
 
     def __init__(self, *args, **kwargs):
-        if sys.version_info > (3,4):  #pragma: no cover
+        if sys.version_info > (3, 4):  # pragma: no cover
             HTMLParser.__init__(self, convert_charrefs=False)
-        else:  #pragma: no cover
+        else:  # pragma: no cover
             HTMLParser.__init__(self)
 
         super(HTMLRewriter, self).__init__(*args, **kwargs)
@@ -592,7 +590,7 @@ class HTMLRewriter(HTMLRewriterMixin, HTMLParser):
             self.out.write(string)
 
     def _internal_close(self):
-        if (self._wb_parse_context):
+        if self._wb_parse_context:
             end_tag = '</' + self._wb_parse_context + '>'
             self.feed(end_tag)
             self._wb_parse_context = None
@@ -626,7 +624,7 @@ class HTMLRewriter(HTMLRewriterMixin, HTMLParser):
             self.out.write('/>')
 
     def handle_endtag(self, tag):
-        if (tag == self._wb_parse_context):
+        if tag == self._wb_parse_context:
             self._wb_parse_context = None
 
         if tag == 'head' and not self.has_base:
@@ -638,16 +636,16 @@ class HTMLRewriter(HTMLRewriterMixin, HTMLParser):
         self.parse_data(data)
 
     # overriding regex so that these are no longer called
-    #def handle_entityref(self, data):
+    # def handle_entityref(self, data):
     #    self.out.write('&' + data + ';')
 
-    #def handle_charref(self, data):
+    # def handle_charref(self, data):
     #    self.out.write('&#' + data + ';')
 
     def handle_comment(self, data):
         self.out.write('<!--')
         if self.parse_comments:
-            #data = self._rewrite_script(data)
+            # data = self._rewrite_script(data)
 
             # Rewrite with seperate HTMLRewriter
             comment_rewriter = HTMLRewriter(self.url_rewriter,

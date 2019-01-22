@@ -15,7 +15,7 @@ from pywb.warcserver.index.aggregator import SimpleAggregator
 from pywb.recorder.filters import WriteRevisitDupePolicy
 
 
-#==============================================================================
+# ==============================================================================
 class WritableRedisIndexer(RedisIndexSource):
     def __init__(self, *args, **kwargs):
         redis_url = kwargs.get('redis_url')
@@ -74,7 +74,7 @@ class WritableRedisIndexer(RedisIndexSource):
         return cdx_list
 
     def lookup_revisit(self, lookup_params, digest, url, iso_dt):
-        params = {}
+        params = dict()
         for param in lookup_params:
             if param.startswith('param.'):
                 params[param] = lookup_params[param]
@@ -82,9 +82,7 @@ class WritableRedisIndexer(RedisIndexSource):
         params['url'] = url
         params['closest'] = iso_date_to_timestamp(iso_dt)
 
-        filters = []
-
-        filters.append('!mime:warc/revisit')
+        filters = ['!mime:warc/revisit']
 
         if digest and digest != '-':
             filters.append('digest:' + digest.split(':')[-1])

@@ -74,9 +74,9 @@ class DefaultRewriter(BaseContentRewriter):
         'application/x-amf': 'amf',
 
         # XML -- don't rewrite xml
-        #'text/xml': 'xml',
-        #'application/xml': 'xml',
-        #'application/rss+xml': 'xml',
+        # 'text/xml': 'xml',
+        # 'application/xml': 'xml',
+        # 'application/rss+xml': 'xml',
 
         # PLAIN
         'text/plain': 'guess-text',
@@ -140,4 +140,4 @@ class RewriterWithJSProxy(DefaultRewriter):
 
         min_vers = supported.get(ua.browser)
 
-        return (min_vers and ua.version >= min_vers)
+        return min_vers and ua.version >= min_vers

@@ -1,14 +1,17 @@
 from gevent.pywsgi import WSGIServer, WSGIHandler
 from gevent import spawn
 import logging
+import traceback
 
 
 # ============================================================================
 class GeventServer(object):
     def __init__(self, app, port=0, hostname='localhost', handler_class=None,
-                direct=False):
+                 direct=False):
         self.port = port
         self.make_server(app, port, hostname, handler_class, direct=direct)
+        self.server = None
+        self.ge = None
 
     def stop(self):
         if self.server:

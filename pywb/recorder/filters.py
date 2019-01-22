@@ -26,7 +26,7 @@ class ExcludeHttpOnlyCookieHeaders(object):
             return None
 
         if (name == 'set-cookie' and
-            self.HTTPONLY_RX.search(header[1])):
+                self.HTTPONLY_RX.search(header[1])):
             return None
 
         return header
@@ -114,5 +114,3 @@ class SkipRangeRequestFilter(SkipDefaultFilter):
             return True
 
         return False
-
-

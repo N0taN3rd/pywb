@@ -19,14 +19,16 @@ from pywb import DEFAULT_CONFIG
 
 from six.moves import input
 
-#=============================================================================
+
+# =============================================================================
 # to allow testing by mocking get_input
 
 
 def get_input(msg):  # pragma: no cover
     return input(msg)
 
-#=============================================================================
+
+# =============================================================================
 
 
 class CollectionsManager(object):
@@ -43,6 +45,13 @@ directory structure expected by pywb
     COLLS_DIR = 'collections'
 
     def __init__(self, coll_name, colls_dir=None, must_exist=True):
+        self.coll_name = None
+        self.curr_coll_dir = None
+        self.archive_dir = None
+        self.indexes_dir = None
+        self.static_dir = None
+        self.templates_dir = None
+
         colls_dir = colls_dir or self.COLLS_DIR
         self.default_config = load_yaml_config(DEFAULT_CONFIG)
 
@@ -184,7 +193,7 @@ directory structure expected by pywb
                             last_line = line
 
         shutil.move(merged_file, cdx_file)
-        #os.rename(merged_file, cdx_file)
+        # os.rename(merged_file, cdx_file)
         os.remove(temp_file)
 
     def set_metadata(self, namevalue_pairs):
@@ -318,7 +327,7 @@ directory structure expected by pywb
         migrate.convert_to_cdxj()
 
 
-#=============================================================================
+# =============================================================================
 def main(args=None):
     description = """
 Create manage file based web archive collections

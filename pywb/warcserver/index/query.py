@@ -4,7 +4,7 @@ from pywb.utils.canonicalize import calc_search_range
 from pywb.utils.format import to_bool
 
 
-#=================================================================
+# =================================================================
 class CDXQuery(object):
     def __init__(self, params):
         self.params = params

@@ -25,6 +25,7 @@ except ImportError:  # pragma: no cover
 # ============================================================================
 class RelEnvironment(Environment):
     """Override join_path() to enable relative template paths."""
+
     def join_path(self, template, parent):
         return os.path.join(os.path.dirname(parent), template)
 
@@ -125,6 +126,7 @@ class JinjaEnv(object):
         :return: A decorator to wrap a template filter function
         :rtype: callable
         """
+
         def deco(func):
             name = param or func.__name__
             self.filters[name] = func
@@ -228,7 +230,6 @@ class BaseInsertView(object):
         kwargs['env'] = env
         kwargs['static_prefix'] = env.get('pywb.host_prefix', '') + env.get('pywb.app_prefix', '') + '/static'
 
-
         return template.render(**kwargs)
 
 
@@ -316,19 +317,20 @@ class TopFrameView(BaseInsertView):
 
         is_proxy = 'wsgiprox.proxy_host' in env
 
-        params = {'host_prefix': host_prefix,
-                  'wb_prefix': wb_prefix,
-                  'wb_url': wb_url,
-                  'coll': coll,
+        params = {
+            'host_prefix': host_prefix,
+            'wb_prefix': wb_prefix,
+            'wb_url': wb_url,
+            'coll': coll,
 
-                  'options': {'frame_mod': frame_mod,
-                              'replay_mod': replay_mod},
+            'options': {'frame_mod': frame_mod,
+                        'replay_mod': replay_mod},
 
-                  'embed_url': embed_url,
-                  'is_proxy': is_proxy,
-                  'timestamp': timestamp,
-                  'url': wb_url.get_url()
-                 }
+            'embed_url': embed_url,
+            'is_proxy': is_proxy,
+            'timestamp': timestamp,
+            'url': wb_url.get_url()
+        }
 
         if extra_params:
             params.update(extra_params)
@@ -356,7 +358,7 @@ class PkgResResolver(Resolver):
 
         parts = urlsplit(item)
         if parts.scheme == 'pkg' and parts.netloc:
-            return (parts.netloc, parts.path)
+            return parts.netloc, parts.path
 
         return None
 
@@ -368,5 +370,3 @@ class PkgResResolver(Resolver):
                 return filename
 
         return super(PkgResResolver, self).resolve_source(ctx, item)
-
-

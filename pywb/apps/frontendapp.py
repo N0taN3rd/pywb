@@ -1,6 +1,6 @@
 from gevent.monkey import patch_all; patch_all()
 
-#from bottle import run, Bottle, request, response, debug
+# from bottle import run, Bottle, request, response, debug
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.wsgi import pop_path_info
@@ -59,6 +59,8 @@ class FrontEndApp(object):
         :param str config_file: Path to the config file
         :param dict custom_config: Dictionary containing additional configuration information
         """
+        self.recorder = None
+        self.recorder_path = None
         self.handler = self.handle_request
         self.warcserver = WarcServer(config_file=config_file,
                                      custom_config=custom_config)
@@ -132,9 +134,9 @@ class FrontEndApp(object):
         :rtype: dict[str, str]
         """
         base_paths = {
-                'replay': self.REPLAY_API % port,
-                'cdx-server': self.CDX_API % port,
-               }
+            'replay': self.REPLAY_API % port,
+            'cdx-server': self.CDX_API % port,
+        }
 
         if self.recorder_path:
             base_paths['record'] = self.recorder_path
@@ -164,7 +166,6 @@ class FrontEndApp(object):
 
         self.recorder = RecorderApp(self.RECORD_SERVER % str(self.warcserver_server.port), warc_writer,
                                     accept_colls=recorder_config.get('source_filter'))
-
 
         recorder_server = GeventServer(self.recorder, port=0)
 
@@ -241,7 +242,7 @@ class FrontEndApp(object):
             if proxy_enabled:
                 response.add_access_control_headers(env=environ)
             return response
-        except:
+        except Exception:
             self.raise_not_found(environ, 'Static File Not Found: {0}'.format(filepath))
 
     def get_metadata(self, coll):
@@ -251,7 +252,7 @@ class FrontEndApp(object):
         :return: The collections metadata if it exists
         :rtype: dict
         """
-        #if coll == self.all_coll:
+        # if coll == self.all_coll:
         #    coll = '*'
 
         metadata = {'coll': coll,
@@ -281,9 +282,10 @@ class FrontEndApp(object):
 
         view = BaseInsertView(self.rewriterapp.jinja_env, 'search.html')
 
-        wb_prefix = environ.get('SCRIPT_NAME')
-        if wb_prefix:
-            wb_prefix += '/'
+        if environ.get('SCRIPT_NAME'):
+            wb_prefix = environ.get('SCRIPT_NAME') + '/'
+        else:
+            wb_prefix = None
 
         content = view.render_to_string(environ,
                                         wb_prefix=wb_prefix,
@@ -302,7 +304,7 @@ class FrontEndApp(object):
         """
         base_url = self.rewriterapp.paths['cdx-server']
 
-        #if coll == self.all_coll:
+        # if coll == self.all_coll:
         #    coll = '*'
 
         cdx_url = base_url.format(coll=coll)
@@ -359,10 +361,10 @@ class FrontEndApp(object):
             wb_url_str = request_uri[len(script_name):]
 
         else:
-            wb_url_str = to_native_str(url)
-
             if environ.get('QUERY_STRING'):
-                wb_url_str += '?' + environ.get('QUERY_STRING')
+                wb_url_str = to_native_str(url) + '?' + environ.get('QUERY_STRING')
+            else:
+                wb_url_str = to_native_str(url)
 
         metadata = self.get_metadata(coll)
         if record:
@@ -414,7 +416,7 @@ class FrontEndApp(object):
         """
         result = {'fixed': self.warcserver.list_fixed_routes(),
                   'dynamic': self.warcserver.list_dynamic_routes()
-                 }
+                  }
 
         return WbResponse.json_response(result)
 
@@ -425,7 +427,7 @@ class FrontEndApp(object):
         :return: True if the collection is valid, false otherwise
         :rtype: bool
         """
-        #if coll == self.all_coll:
+        # if coll == self.all_coll:
         #    return True
 
         return (coll in self.warcserver.list_fixed_routes() or
@@ -467,9 +469,10 @@ class FrontEndApp(object):
         url = referer[inx + 1:]
         host = referer[:inx + 1]
 
-        orig_url = environ['PATH_INFO']
         if environ.get('QUERY_STRING'):
-            orig_url += '?' + environ['QUERY_STRING']
+            orig_url = environ['PATH_INFO'] + '?' + environ['QUERY_STRING']
+        else:
+            orig_url = environ['PATH_INFO']
 
         full_url = host + urljoin(url, orig_url)
         return WbResponse.redir_response(full_url, '307 Redirect')
@@ -637,8 +640,8 @@ class MetadataCache(object):
         try:
             mtime = os.path.getmtime(path)
             obj = self.cache.get(path)
-        except:
-            return {}
+        except Exception:
+            return dict()
 
         if not obj:
             return self.store_new(coll, path, mtime)
@@ -679,5 +682,3 @@ class MetadataCache(object):
 if __name__ == "__main__":
     app_server = FrontEndApp.create_app(port=8080)
     app_server.join()
-
-

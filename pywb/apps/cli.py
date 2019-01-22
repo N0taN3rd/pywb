@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 import logging
 
 
-#=============================================================================
+# =============================================================================
 def warcserver(args=None):
     """Utility function for starting pywb's WarcServer"""
     return WarcServerCli(args=args,
@@ -12,7 +12,7 @@ def warcserver(args=None):
                          desc='pywb WarcServer').run()
 
 
-#=============================================================================
+# =============================================================================
 def wayback(args=None):
     """Utility function for starting pywb's Wayback Machine implementation"""
     return WaybackCli(args=args,
@@ -20,7 +20,7 @@ def wayback(args=None):
                       desc='pywb Wayback Machine Server').run()
 
 
-#=============================================================================
+# =============================================================================
 def live_rewrite_server(args=None):
     """Utility function for starting pywb's Wayback Machine implementation in live mode"""
     return LiveCli(args=args,
@@ -28,7 +28,7 @@ def live_rewrite_server(args=None):
                    desc='pywb Live Rewrite Proxy Server').run()
 
 
-#=============================================================================
+# =============================================================================
 class BaseCli(object):
     """Base CLI class that provides the initial arg parser setup,
     calls load to receive the application to be started and starts the application."""
@@ -89,7 +89,7 @@ class BaseCli(object):
             from werkzeug.contrib.profiler import ProfilerMiddleware
             self.application = ProfilerMiddleware(self.application)
 
-    def _extend_parser(self, parser):  #pragma: no cover
+    def _extend_parser(self, parser):  # pragma: no cover
         """Method provided for subclasses to add their cli argument on top of the default cli arguments.
 
         :param ArgumentParser parser: The argument parser instance passed by BaseCli
@@ -101,7 +101,7 @@ class BaseCli(object):
         that can be used by used by pywb.utils.geventserver.GeventServer."""
         if self.r.live:
             self.extra_config['collections'] = {'live':
-                    {'index': '$live'}}
+                                                    {'index': '$live'}}
 
         if self.r.debug:
             self.extra_config['debug'] = True
@@ -125,7 +125,7 @@ class BaseCli(object):
                           direct=True)
 
 
-#=============================================================================
+# =============================================================================
 class ReplayCli(BaseCli):
     """CLI class that adds the cli functionality specific to starting pywb's Wayback Machine implementation"""
 
@@ -137,7 +137,7 @@ class ReplayCli(BaseCli):
 
         parser.add_argument('--all-coll', help='Set "all" collection')
 
-        help_dir='Specify root archive dir (default is current working directory)'
+        help_dir = 'Specify root archive dir (default is current working directory)'
         parser.add_argument('-d', '--directory', help=help_dir)
 
     def load(self):
@@ -152,11 +152,11 @@ class ReplayCli(BaseCli):
             self.extra_config['autoindex'] = self.r.auto_interval
 
         import os
-        if self.r.directory:  #pragma: no cover
+        if self.r.directory:  # pragma: no cover
             os.chdir(self.r.directory)
 
 
-#=============================================================================
+# =============================================================================
 class WarcServerCli(BaseCli):
     """CLI class for starting a WarcServer"""
 
@@ -167,7 +167,7 @@ class WarcServerCli(BaseCli):
         return WarcServer(custom_config=self.extra_config)
 
 
-#=============================================================================
+# =============================================================================
 class WaybackCli(ReplayCli):
     """CLI class for starting the pywb's implementation of the Wayback Machine"""
 
@@ -178,7 +178,7 @@ class WaybackCli(ReplayCli):
         return FrontEndApp(custom_config=self.extra_config)
 
 
-#=============================================================================
+# =============================================================================
 class LiveCli(BaseCli):
     """CLI class for starting pywb in replay server in live mode"""
 
@@ -191,6 +191,6 @@ class LiveCli(BaseCli):
         return FrontEndApp(config_file=None, custom_config=self.extra_config)
 
 
-#=============================================================================
+# =============================================================================
 if __name__ == "__main__":
     wayback()

@@ -13,7 +13,7 @@ if six.PY3:
         return (a > b) - (a < b)
 
 
-#=================================================================
+# =================================================================
 def binsearch_offset(reader, key, compare_func=cmp, block_size=8192):
     """
     Find offset of the line which matches a given 'key' using binary search
@@ -44,7 +44,7 @@ def binsearch_offset(reader, key, compare_func=cmp, block_size=8192):
     return min_ * block_size
 
 
-#=================================================================
+# =================================================================
 def binsearch(reader, key, compare_func=cmp, block_size=8192):
     """
     Perform a binary search for a specified key to within a 'block_size'
@@ -66,7 +66,7 @@ def binsearch(reader, key, compare_func=cmp, block_size=8192):
     return gen_iter(reader.readline())
 
 
-#=================================================================
+# =================================================================
 def linearsearch(iter_, key, prev_size=0, compare_func=cmp):
     """
     Perform a linear search over iterator until
@@ -96,7 +96,7 @@ def linearsearch(iter_, key, prev_size=0, compare_func=cmp):
     return itertools.chain(prev_deque, iter_)
 
 
-#=================================================================
+# =================================================================
 def search(reader, key, prev_size=0, compare_func=cmp, block_size=8192):
     """
     Perform a binary search for a specified key to within a 'block_size'
@@ -113,7 +113,7 @@ def search(reader, key, prev_size=0, compare_func=cmp, block_size=8192):
     return iter_
 
 
-#=================================================================
+# =================================================================
 def iter_range(reader, start, end, prev_size=0):
     """
     Creates an iterator which iterates over lines where
@@ -129,7 +129,7 @@ def iter_range(reader, start, end, prev_size=0):
     return end_iter
 
 
-#=================================================================
+# =================================================================
 def iter_prefix(reader, key):
     """
     Creates an iterator which iterates over lines that start with prefix
@@ -141,7 +141,7 @@ def iter_prefix(reader, key):
         search(reader, key))
 
 
-#=================================================================
+# =================================================================
 def iter_exact(reader, key, token=b' '):
     """
     Create an iterator which iterates over lines where the first field matches

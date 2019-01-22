@@ -13,7 +13,7 @@ import six
 JSON_CT = 'application/json; charset=utf-8'
 
 
-#=============================================================================
+# =============================================================================
 class BaseWarcServer(object):
     def __init__(self, *args, **kwargs):
         self.route_dict = {}
@@ -21,10 +21,10 @@ class BaseWarcServer(object):
 
         self.url_map = Map()
 
-        def list_routes(environ):
-            return {}, self.route_dict, {}
+        self.url_map.add(Rule('/', endpoint=self._bws_list_routes))
 
-        self.url_map.add(Rule('/', endpoint=list_routes))
+    def _bws_list_routes(self, environ, *args, **kwargs):
+        return {}, self.route_dict, {}
 
     def add_route(self, path, handler, path_param_name='', default_value=''):
         def direct_input_request(environ, mode='', path_param_value=default_value):
@@ -72,9 +72,7 @@ class BaseWarcServer(object):
             return e(environ, start_response)
 
         try:
-            result = endpoint(environ, **args)
-
-            out_headers, res, errs = result
+            out_headers, res, errs = endpoint(environ, **args)
 
             if not res:
                 return self.send_error(errs, start_response)

@@ -150,7 +150,7 @@ class BaseContentRewriter(object):
             if rwinfo.charset:
                 try:
                     head_insert_str = webencodings.encode(head_insert_orig, rwinfo.charset)
-                except:
+                except Exception:
                     pass
 
             # no charset detected, encode banner as ascii html entities
@@ -258,7 +258,7 @@ class BufferedRewriter(object):
         if client_metadata:
             try:
                 return json.loads(client_metadata)
-            except:
+            except Exception:
                 pass
 
         return {}
@@ -312,12 +312,14 @@ class StreamingRewriter(object):
             decoder = codecs.getincrementaldecoder(charset)()
 
             while True:
-                buff = stream.read(BUFF_SIZE)
-                if not buff:
+                read_buff = stream.read(BUFF_SIZE)
+                if not read_buff:
                     break
 
                 if self.align_to_line:
-                    buff += stream.readline()
+                    buff = read_buff + stream.readline()
+                else:
+                    buff = read_buff
 
                 try:
                     buff = decoder.decode(buff)
@@ -354,7 +356,7 @@ class RewriteInfo(object):
     JSONP_CONTAINS = ['callback=jQuery',
                       'callback=jsonp',
                       '.json?'
-                     ]
+                      ]
 
     def __init__(self, record, content_rewriter, url_rewriter, cookie_rewriter=None):
         self.record = record
@@ -462,7 +464,7 @@ class RewriteInfo(object):
         else:
             return 'css'
 
-        #text_type = 'js' if mod == 'js_' else 'css'
+        # text_type = 'js' if mod == 'js_' else 'css'
 
     @property
     def content_stream(self):
@@ -499,4 +501,3 @@ class RewriteInfo(object):
             return False
 
         return True
-

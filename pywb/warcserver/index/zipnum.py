@@ -5,14 +5,16 @@ import collections
 import itertools
 import logging
 import datetime
-import json
 import six
+import re
+import sys
+import json
 
 from six.moves import map
 
 from warcio.bufferedreaders import gzip_decompressor
 
-#from pywb.warcserver.index.cdxsource import CDXSource
+# from pywb.warcserver.index.cdxsource import CDXSource
 from pywb.warcserver.index.indexsource import BaseIndexSource
 from pywb.warcserver.index.cdxobject import IDXObject, CDXException, CDXObject
 from pywb.warcserver.index.query import CDXQuery
@@ -43,13 +45,14 @@ class AlwaysJsonResponse(dict):
 
 
 # ============================================================================
-#TODO: see if these could be combined with warc path resolvers
+# TODO: see if these could be combined with warc path resolvers
 
 class LocMapResolver(object):
     """ Lookup shards based on a file mapping
     shard name to one or more paths. The entries are
     tab delimited.
     """
+
     def __init__(self, loc_summary, loc_filename):
         # initial loc map
         self.loc_map = {}
@@ -64,7 +67,7 @@ class LocMapResolver(object):
     def load_loc(self):
         # check modified time of current file before loading
         new_mtime = os.path.getmtime(self.loc_filename)
-        if (new_mtime == self.loc_mtime):
+        if new_mtime == self.loc_mtime:
             return
 
         # update loc file mtime
@@ -94,8 +97,8 @@ class LocPrefixResolver(object):
     """ Use a prefix lookup, where the prefix can either be a fixed
     string or can be a regex replacement of the index summary path
     """
+
     def __init__(self, loc_summary, loc_config):
-        import re
         loc_match = loc_config.get('match', '().*')
         loc_replace = loc_config['replace']
         loc_summary = os.path.dirname(loc_summary) + '/'
@@ -149,35 +152,33 @@ class ZipNumIndexSource(BaseIndexSource):
         self.loc_resolver.load_loc()
         return self._do_load_cdx(self.summary, CDXQuery(params))
 
+    def _gen_idx(self, idx_iter):
+        for idx in idx_iter:
+            yield IDXObject(idx)
+
+    def _gen_cdx(self, blocks):
+        for blk in blocks:
+            for cdx in blk:
+                yield CDXObject(cdx)
+
     def _do_load_cdx(self, filename, query):
         reader = open(filename, 'rb')
 
         idx_iter = self.compute_page_range(reader, query)
 
         if query.secondary_index_only:
-            def gen_idx():
-                for idx in idx_iter:
-                    yield IDXObject(idx)
-
-            return gen_idx()
+            return self._gen_idx(idx_iter)
 
         if query.page_count:
             return idx_iter
-
         blocks = self.idx_to_cdx(idx_iter, query)
-
-        def gen_cdx():
-            for blk in blocks:
-                for cdx in blk:
-                    yield CDXObject(cdx)
-
-        return gen_cdx()
+        return self._gen_cdx(blocks)
 
     def _page_info(self, pages, pagesize, blocks):
         info = AlwaysJsonResponse(
-                    pages=pages,
-                    pageSize=pagesize,
-                    blocks=blocks)
+            pages=pages,
+            pageSize=pagesize,
+            blocks=blocks)
 
         return info
 
@@ -225,7 +226,7 @@ class ZipNumIndexSource(BaseIndexSource):
         try:
             blocks = end['lineno'] - first['lineno']
             total_pages = int(blocks / pagesize) + 1
-        except:
+        except Exception:
             blocks = -1
             total_pages = 1
 
@@ -267,7 +268,6 @@ class ZipNumIndexSource(BaseIndexSource):
 
         reader.close()
 
-
     def search_by_line_num(self, reader, line):  # pragma: no cover
         def line_cmp(line1, line2):
             line1_no = int(line1.rsplit(b'\t', 1)[-1])
@@ -285,12 +285,12 @@ class ZipNumIndexSource(BaseIndexSource):
             idx = IDXObject(idx)
 
             if (blocks and blocks.part == idx['part'] and
-                blocks.offset + blocks.length == idx['offset'] and
-                blocks.count < self.max_blocks):
+                    blocks.offset + blocks.length == idx['offset'] and
+                    blocks.count < self.max_blocks):
 
-                    blocks.length += idx['length']
-                    blocks.count += 1
-                    ranges.append(idx['length'])
+                blocks.length += idx['length']
+                blocks.count += 1
+                ranges.append(idx['length'])
 
             else:
                 if blocks:
@@ -312,7 +312,7 @@ class ZipNumIndexSource(BaseIndexSource):
 
         try:
             locations = self.loc_resolver(blocks.part, query)
-        except:
+        except Exception:
             raise Exception('No Locations Found for: ' + blocks.part)
 
         for location in self.loc_resolver(blocks.part, query):
@@ -320,12 +320,11 @@ class ZipNumIndexSource(BaseIndexSource):
                 return self.load_blocks(location, blocks, ranges, query)
             except Exception as exc:
                 last_exc = exc
-                import sys
                 last_traceback = sys.exc_info()[2]
 
         if last_exc:
             six.reraise(Exception, last_exc, last_traceback)
-            #raise last_exc
+            # raise last_exc
         else:
             raise Exception('No Locations Found for: ' + blocks.part)
 
@@ -334,7 +333,7 @@ class ZipNumIndexSource(BaseIndexSource):
         a line iterator which decompresses and returns one line at a time,
         bounded by query.key and query.end_key
         """
-        if (logging.getLogger().getEffectiveLevel() <= logging.DEBUG):
+        if logging.getLogger().getEffectiveLevel() <= logging.DEBUG:
             msg = 'Loading {b.count} blocks from {loc}:{b.offset}+{b.length}'
             logging.debug(msg.format(b=blocks, loc=location))
 
@@ -364,10 +363,10 @@ class ZipNumIndexSource(BaseIndexSource):
         return iter_
 
     def __repr__(self):
-        return 'ZipNumIndexSource({0}, {1})'.format(self.summary, self.config)
+        return self.__str__()
 
     def __str__(self):
-        return 'zipnum'
+        return 'ZipNumIndexSource({0}, {1})'.format(self.summary, self.config)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -395,4 +394,3 @@ class ZipNumIndexSource(BaseIndexSource):
             return
 
         return cls(config['path'], config)
-

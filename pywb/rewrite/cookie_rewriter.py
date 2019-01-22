@@ -3,7 +3,7 @@ import six
 import re
 
 
-#================================================================
+# ================================================================
 class WbUrlBaseCookieRewriter(object):
     """ Base Cookie rewriter for wburl-based requests.
     """
@@ -85,13 +85,13 @@ class WbUrlBaseCookieRewriter(object):
             del morsel['max-age']
 
 
-#=================================================================
+# =================================================================
 class RemoveAllCookiesRewriter(WbUrlBaseCookieRewriter):
     def rewrite(self, cookie_str, header='Set-Cookie'):
         return []
 
 
-#=================================================================
+# =================================================================
 class MinimalScopeCookieRewriter(WbUrlBaseCookieRewriter):
     """
     Attempt to rewrite cookies to minimal scope possible
@@ -112,7 +112,7 @@ class MinimalScopeCookieRewriter(WbUrlBaseCookieRewriter):
         return morsel
 
 
-#=================================================================
+# =================================================================
 class HostScopeCookieRewriter(WbUrlBaseCookieRewriter):
     """
     Attempt to rewrite cookies to current host url..
@@ -136,7 +136,7 @@ class HostScopeCookieRewriter(WbUrlBaseCookieRewriter):
         return morsel
 
 
-#=================================================================
+# =================================================================
 class ExactPathCookieRewriter(WbUrlBaseCookieRewriter):
     """
     Rewrite cookies only using exact path, useful for live rewrite
@@ -155,7 +155,7 @@ class ExactPathCookieRewriter(WbUrlBaseCookieRewriter):
         return morsel
 
 
-#=================================================================
+# =================================================================
 class RootScopeCookieRewriter(WbUrlBaseCookieRewriter):
     """
     Sometimes it is necessary to rewrite cookies to root scope
@@ -163,6 +163,7 @@ class RootScopeCookieRewriter(WbUrlBaseCookieRewriter):
 
     This rewriter simply sets all cookies to be in the root
     """
+
     def rewrite_cookie(self, name, morsel):
         # get root path
         morsel['path'] = self.url_rewriter.root_path
@@ -174,7 +175,7 @@ class RootScopeCookieRewriter(WbUrlBaseCookieRewriter):
         return morsel
 
 
-#=================================================================
+# =================================================================
 def get_cookie_rewriter(cookie_scope):
     if cookie_scope == 'root':
         return RootScopeCookieRewriter
@@ -188,4 +189,3 @@ def get_cookie_rewriter(cookie_scope):
         return MinimalScopeCookieRewriter
     else:
         return HostScopeCookieRewriter
-

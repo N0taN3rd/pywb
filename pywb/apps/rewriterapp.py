@@ -24,7 +24,6 @@ from pywb.apps.wbrequestresponse import WbResponse
 from pywb.rewrite.rewriteinputreq import RewriteInputRequest
 from pywb.rewrite.templateview import JinjaEnv, HeadInsertView, TopFrameView, BaseInsertView
 
-
 from io import BytesIO
 from copy import copy
 
@@ -40,7 +39,7 @@ class UpstreamException(WbException):
 
 
 # ============================================================================
-#class Rewriter(RewriteDASHMixin, RewriteAMFMixin, RewriteContent):
+# class Rewriter(RewriteDASHMixin, RewriteAMFMixin, RewriteContent):
 #    pass
 
 
@@ -84,8 +83,8 @@ class RewriterApp(object):
                                                self.banner_view)
 
         self.frame_insert_view = TopFrameView(self.jinja_env,
-                                               self._html_templ('frame_insert_html'),
-                                               self.banner_view)
+                                              self._html_templ('frame_insert_html'),
+                                              self.banner_view)
 
         self.error_view = BaseInsertView(self.jinja_env, self._html_templ('error_html'))
         self.not_found_view = BaseInsertView(self.jinja_env, self._html_templ('not_found_html'))
@@ -129,9 +128,9 @@ class RewriterApp(object):
             if accept_dt:
                 try:
                     wb_url.timestamp = http_date_to_timestamp(accept_dt)
-                except:
+                except Exception:
                     raise UpstreamException(400, url=wb_url.url, details='Invalid Accept-Datetime')
-                    #return WbResponse.text_response('Invalid Accept-Datetime', status='400 Bad Request')
+                    # return WbResponse.text_response('Invalid Accept-Datetime', status='400 Bad Request')
 
                 wb_url.type = wb_url.REPLAY
 
@@ -159,7 +158,7 @@ class RewriterApp(object):
         range_start = start
         range_end = end
 
-        #if start with 0, load from upstream, but add range after
+        # if start with 0, load from upstream, but add range after
         if start == 0:
             del inputreq.env['HTTP_RANGE']
         else:
@@ -189,11 +188,6 @@ class RewriterApp(object):
 
             if range_start >= content_length or range_end >= content_length:
                 details = 'Invalid Range: {0} >= {2} or {1} >= {2}'.format(range_start, range_end, content_length)
-                try:
-                    r.raw.close()
-                except:
-                    pass
-
                 raise UpstreamException(416, url=wb_url.url, details=details)
 
             range_len = range_end - range_start + 1
@@ -283,6 +277,8 @@ class RewriterApp(object):
             cookie_key = self.get_cookie_key(kwargs)
             res = self.cookie_tracker.get_cookie_headers(wb_url.url, urlrewriter, cookie_key)
             inputreq.extra_cookie, setcookie_headers = res
+        else:
+            cookie_key = None
 
         r = self._do_req(inputreq, wb_url, kwargs, skip_record)
 
@@ -291,7 +287,7 @@ class RewriterApp(object):
             try:
                 error = r.raw.read()
                 r.raw.close()
-            except:
+            except Exception:
                 pass
 
             if error:
@@ -312,7 +308,7 @@ class RewriterApp(object):
 
             try:
                 r.raw.close()
-            except:
+            except Exception:
                 pass
 
             return self.send_redirect(new_path, url_parts, urlrewriter)
@@ -324,9 +320,9 @@ class RewriterApp(object):
         memento_dt = r.headers.get('Memento-Datetime')
         target_uri = r.headers.get('WARC-Target-URI')
 
-        #cdx['urlkey'] = urlkey
-        #cdx['timestamp'] = http_date_to_timestamp(memento_dt)
-        #cdx['url'] = target_uri
+        # cdx['urlkey'] = urlkey
+        # cdx['timestamp'] = http_date_to_timestamp(memento_dt)
+        # cdx['url'] = target_uri
 
         set_content_loc = False
 
@@ -337,7 +333,7 @@ class RewriterApp(object):
         # if redir to exact, redir if url or ts are different
         if self.redirect_to_exact:
             if (set_content_loc or
-                (wb_url.timestamp != cdx.get('timestamp') and not cdx.get('is_live'))):
+                    (wb_url.timestamp != cdx.get('timestamp') and not cdx.get('is_live'))):
 
                 new_url = urlrewriter.get_new_url(url=target_uri,
                                                   timestamp=cdx['timestamp'],
@@ -369,15 +365,15 @@ class RewriterApp(object):
         else:
             top_url = self.get_top_url(full_prefix, wb_url, cdx, kwargs)
             head_insert_func = (self.head_insert_view.
-                                    create_insert_func(wb_url,
-                                                       full_prefix,
-                                                       host_prefix,
-                                                       top_url,
-                                                       environ,
-                                                       framed_replay,
-                                                       coll=kwargs.get('coll', ''),
-                                                       replay_mod=self.replay_mod,
-                                                       config=self.config))
+                                create_insert_func(wb_url,
+                                                   full_prefix,
+                                                   host_prefix,
+                                                   top_url,
+                                                   environ,
+                                                   framed_replay,
+                                                   coll=kwargs.get('coll', ''),
+                                                   replay_mod=self.replay_mod,
+                                                   config=self.config))
 
         cookie_rewriter = None
         if self.cookie_tracker:
@@ -416,12 +412,11 @@ class RewriterApp(object):
     def format_response(self, response, wb_url, full_prefix, is_timegate, is_proxy):
         memento_ts = None
         if not isinstance(response, WbResponse):
-            content_type = 'text/html'
-
             # if not replay outer frame, specify utf-8 charset
             if not self.is_framed_replay(wb_url):
-                content_type += '; charset=utf-8'
+                content_type = 'text/html; charset=utf-8'
             else:
+                content_type = 'text/html'
                 memento_ts = wb_url.timestamp
 
             response = WbResponse.text_response(response, content_type=content_type)
@@ -444,8 +439,7 @@ class RewriterApp(object):
             if is_proxy:
                 memento_url = url
             else:
-                memento_url = full_prefix + memento_ts + self.replay_mod
-                memento_url += '/' + url
+                memento_url = full_prefix + memento_ts + self.replay_mod + '/' + url
         else:
             memento_url = None
 
@@ -469,20 +463,17 @@ class RewriterApp(object):
 
     def _get_timegate_timemap(self, url, full_prefix):
         # timegate url
-        timegate_url = full_prefix
         if self.replay_mod:
-            timegate_url += self.replay_mod + '/'
-
-        timegate_url += url
+            timegate_url = full_prefix + self.replay_mod + '/' + url
+        else:
+            timegate_url = full_prefix + url
 
         # timemap url
         timemap_url = full_prefix + 'timemap/link/' + url
         return timegate_url, timemap_url
 
     def get_top_url(self, full_prefix, wb_url, cdx, kwargs):
-        top_url = full_prefix
-        top_url += wb_url.to_str(mod='')
-        return top_url
+        return full_prefix + wb_url.to_str(mod='')
 
     def handle_error(self, environ, ue):
         if ue.status_code == 404:
@@ -505,7 +496,6 @@ class RewriterApp(object):
 
         return WbResponse.text_response(resp, status=status, content_type='text/html')
 
-
     def _do_req(self, inputreq, wb_url, kwargs, skip_record):
         req_data = inputreq.reconstruct_request(wb_url.url)
 
@@ -520,7 +510,7 @@ class RewriterApp(object):
         else:
             closest = wb_url.timestamp
 
-        params = {}
+        params = dict()
         params['url'] = wb_url.url
         params['closest'] = closest
         params['matchType'] = 'exact'
@@ -538,7 +528,7 @@ class RewriterApp(object):
         return r
 
     def do_query(self, wb_url, kwargs):
-        params = {}
+        params = dict()
         params['url'] = wb_url.url
         params['output'] = kwargs.get('output', 'json')
         params['from'] = wb_url.timestamp
@@ -591,28 +581,28 @@ class RewriterApp(object):
         scheme = environ['wsgi.url_scheme'] + '://'
 
         # proxy
-        host = environ.get('wsgiprox.proxy_host')
-        if host:
-            return scheme + host
+        proxy_host = environ.get('wsgiprox.proxy_host')
+        if proxy_host:
+            return scheme + proxy_host
 
         # default
-        host = environ.get('HTTP_HOST')
-        if host:
-            return scheme + host
+        http_host = environ.get('HTTP_HOST')
+        if http_host:
+            return scheme + http_host
 
         # if no host
-        host = environ['SERVER_NAME']
-        if environ['wsgi.url_scheme'] == 'https':
-            if environ['SERVER_PORT'] != '443':
-                host += ':' + environ['SERVER_PORT']
+
+        if environ['wsgi.url_scheme'] == 'https' and environ['SERVER_PORT'] != '443':
+            host = environ['SERVER_NAME'] + ':' + environ['SERVER_PORT']
+        elif environ['SERVER_PORT'] != '80':
+            host = environ['SERVER_NAME'] + ':' + environ['SERVER_PORT']
         else:
-            if environ['SERVER_PORT'] != '80':
-                host += ':' + environ['SERVER_PORT']
+            host = environ['SERVER_NAME']
 
         return scheme + host
 
     def get_rel_prefix(self, environ):
-        #return request.script_name
+        # return request.script_name
         return environ.get('SCRIPT_NAME') + '/'
 
     def get_full_prefix(self, environ):
@@ -648,7 +638,7 @@ class RewriterApp(object):
         param_str = urlencode(params, True)
         if param_str:
             q_char = '&' if '?' in base_url else '?'
-            base_url += q_char + param_str
+            return base_url + q_char + param_str
         return base_url
 
     def get_cookie_key(self, kwargs):

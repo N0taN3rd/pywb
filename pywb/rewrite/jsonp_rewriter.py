@@ -20,4 +20,3 @@ class JSONPRewriter(StreamingRewriter):
 
         string = m_callback.group(1) + string[m_json.end(1):]
         return string
-

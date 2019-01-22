@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from six.moves.urllib.parse import urlsplit
 
 
-#=============================================================================
+# =============================================================================
 class DefaultHeaderRewriter(object):
     header_rules = {
         'access-control-allow-origin': 'prefix-if-url-rewrite',
@@ -137,7 +137,7 @@ class DefaultHeaderRewriter(object):
                 try:
                     if int(value) >= 0:
                         return (name, value)
-                except:
+                except Exception:
                     pass
 
             return (self.header_prefix + name, value)
@@ -160,7 +160,7 @@ class DefaultHeaderRewriter(object):
     def _add_cache_headers(self, new_headers, http_cache):
         try:
             age = int(http_cache)
-        except:
+        except ValueError:
             age = 0
 
         if age <= 0:
@@ -170,5 +170,3 @@ class DefaultHeaderRewriter(object):
             dt = dt + timedelta(seconds=age)
             new_headers.append(('Cache-Control', 'max-age=' + str(age)))
             new_headers.append(('Expires', datetime_to_http_date(dt)))
-
-
