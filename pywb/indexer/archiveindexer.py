@@ -143,6 +143,11 @@ class DefaultRecordParser(object):
             raise Exception('Sorry, minimal index option and ' +
                             'append POST options can not be used together')
 
+        self_parse_warc_record = self.parse_warc_record
+        self_begin_payload = self.begin_payload
+        self_handle_payload = self.handle_payload
+        self_end_payload = self.end_payload
+
         for record in raw_iter:
             entry = None
 
@@ -162,9 +167,9 @@ class DefaultRecordParser(object):
                       record.content_type == 'application/warc-fields'):
                     continue
 
-                entry = self.parse_warc_record(record)
+                entry = self_parse_warc_record(record)
             elif record.format == 'arc':
-                entry = self.parse_arc_record(record)
+                entry = self_parse_warc_record(record)
 
             if not entry:
                 continue
@@ -192,23 +197,27 @@ class DefaultRecordParser(object):
 
             entry.record = record
 
-            self.begin_payload(compute_digest, entry)
+            self_begin_payload(compute_digest, entry)
+
+            record_raw_stream_read = record.raw_stream.read
 
             while True:
-                buff = record.raw_stream.read(BUFF_SIZE)
+                buff = record_raw_stream_read(BUFF_SIZE)
                 if not buff:
                     break
-                self.handle_payload(buff)
+                self_handle_payload(buff)
 
             raw_iter.read_to_end(record)
 
             entry.set_rec_info(*raw_iter.member_info)
-            self.end_payload(entry)
+            self_end_payload(entry)
 
             yield entry
 
     def join_request_records(self, entry_iter):
         prev_entry = None
+
+        self_options = self.options
 
         for entry in entry_iter:
             if not prev_entry:
@@ -224,8 +233,8 @@ class DefaultRecordParser(object):
                   prev_entry.record.rec_headers.get_header('WARC-Record-ID')):
                 pass
 
-            elif (entry.merge_request_data(prev_entry, self.options) or
-                  prev_entry.merge_request_data(entry, self.options)):
+            elif (entry.merge_request_data(prev_entry, self_options) or
+                  prev_entry.merge_request_data(entry, self_options)):
                 yield prev_entry
                 yield entry
                 prev_entry = None
@@ -335,9 +344,11 @@ class DefaultRecordParser(object):
         if self.options.get('append_post'):
             entry_iter = self.join_request_records(entry_iter)
 
+        self_options_get = self.options.get
+
         for entry in entry_iter:
             if (entry.record.rec_type in ('request', 'warcinfo') and
-                    not self.options.get('include_all')):
+                    not self_options_get('include_all')):
                 continue
 
             yield entry

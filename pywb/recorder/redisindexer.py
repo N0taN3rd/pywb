@@ -67,9 +67,10 @@ class WritableRedisIndexer(RedisIndexSource):
 
         cdx_list = cdxout.getvalue().rstrip().split(b'\n')
 
+        self_redis_zadd = self.redis.zadd
         for cdx in cdx_list:
             if cdx:
-                self.redis.zadd(z_key, 0, cdx)
+                self_redis_zadd(z_key, 0, cdx)
 
         return cdx_list
 
@@ -91,8 +92,10 @@ class WritableRedisIndexer(RedisIndexSource):
 
         cdx_iter, errs = self.cdx_lookup(params)
 
+        self_dupe_policy = self.dupe_policy
+
         for cdx in cdx_iter:
-            res = self.dupe_policy(cdx, params)
+            res = self_dupe_policy(cdx, params)
             if res:
                 return res
 

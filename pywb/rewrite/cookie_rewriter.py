@@ -1,6 +1,7 @@
 from six.moves.http_cookies import SimpleCookie, CookieError
 import six
 import re
+import traceback
 
 
 # ================================================================
@@ -18,18 +19,23 @@ class WbUrlBaseCookieRewriter(object):
         try:
             cookie = SimpleCookie(cookie_str)
         except CookieError:
-            import traceback
             traceback.print_exc()
             return results
 
+        results_append = results.append
+
+        self_rewrite_cookie = self.rewrite_cookie
+        self_filter_morsel = self._filter_morsel
+        self_add_prefix_cookie_for_all_mods = self.add_prefix_cookie_for_all_mods
+
         for name, morsel in six.iteritems(cookie):
-            morsel = self.rewrite_cookie(name, morsel)
+            morsel = self_rewrite_cookie(name, morsel)
 
-            self._filter_morsel(morsel)
+            self_filter_morsel(morsel)
 
-            if not self.add_prefix_cookie_for_all_mods(morsel, results, header):
+            if not self_add_prefix_cookie_for_all_mods(morsel, results, header):
                 value = morsel.OutputString()
-                results.append((header, value))
+                results_append((header, value))
 
         return results
 
@@ -52,10 +58,12 @@ class WbUrlBaseCookieRewriter(object):
         if not path or not path.endswith('/'):
             return False
 
+        path_replace = path.replace
+        results_append = results.append
         for mod in ('mp_', 'cs_', 'js_', 'im_', 'oe_', 'if_'):
-            new_path = path.replace(curr_mod + '/', mod + '/')
+            new_path = path_replace(curr_mod + '/', mod + '/')
             morsel['path'] = new_path
-            results.append((header, morsel.OutputString()))
+            results_append((header, morsel.OutputString()))
 
         return True
 

@@ -336,11 +336,13 @@ class RespWrapper(Wrapper):
 class ReqWrapper(Wrapper):
     def __init__(self, stream, req_headers, params, create_func):
         super(ReqWrapper, self).__init__(stream, params, create_func)
-        self.headers = {}
+        headers = {}
 
         for n in six.iterkeys(req_headers):
             if n.upper().startswith('WARC-'):
-                self.headers[n] = req_headers[n]
+                headers[n] = req_headers[n]
+
+        self.headers = headers
 
     def close(self):
         # no need to close wsgi.input

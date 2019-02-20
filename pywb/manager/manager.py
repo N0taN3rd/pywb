@@ -1,23 +1,23 @@
+import logging
 import os
+import re
 import shutil
 import sys
-import logging
-import heapq
-import yaml
-import re
-import six
-
-from distutils.util import strtobool
-from pkg_resources import resource_string
-
 from argparse import ArgumentParser, RawTextHelpFormatter
+from distutils.util import strtobool
+from heapq import merge as heapq_merge
+from os import listdir as os_listdir
+from os.path import abspath as os_path_abspath, isdir as os_path_isdir, join as os_path_join
+from shutil import copy2 as shutil_copy2
 
-from pywb.utils.loaders import load_yaml_config
+import yaml
+from pkg_resources import resource_string
+from six.moves import input
 from warcio.timeutils import timestamp20_now
 
 from pywb import DEFAULT_CONFIG
-
-from six.moves import input
+from pywb.indexer.cdxindexer import write_multi_cdx_index
+from pywb.utils.loaders import load_yaml_config
 
 
 # =============================================================================
@@ -58,7 +58,7 @@ directory structure expected by pywb
         if coll_name and not self.COLL_RX.match(coll_name):
             raise ValueError('Invalid Collection Name: ' + coll_name)
 
-        self.colls_dir = os.path.join(os.getcwd(), colls_dir)
+        self.colls_dir = os_path_join(os.getcwd(), colls_dir)
 
         self.change_collection(coll_name)
 
@@ -67,7 +67,7 @@ directory structure expected by pywb
 
     def change_collection(self, coll_name):
         self.coll_name = coll_name
-        self.curr_coll_dir = os.path.join(self.colls_dir, coll_name)
+        self.curr_coll_dir = os_path_join(self.colls_dir, coll_name)
 
         self.archive_dir = self._get_dir('archive_paths')
 
@@ -77,24 +77,24 @@ directory structure expected by pywb
 
     def list_colls(self):
         print('Collections:')
-        if not os.path.isdir(self.colls_dir):
+        if not os_path_isdir(self.colls_dir):
             msg = ('"Collections" directory not found. ' +
                    'To create a new collection, run:\n\n{0} init <name>')
             raise IOError(msg.format(sys.argv[0]))
-        for d in os.listdir(self.colls_dir):
-            if os.path.isdir(os.path.join(self.colls_dir, d)):
+        for d in os_listdir(self.colls_dir):
+            if os_path_isdir(os_path_join(self.colls_dir, d)):
                 print('- ' + d)
 
     def _get_root_dir(self, name):
-        return os.path.join(os.getcwd(),
+        return os_path_join(os.getcwd(),
                             self.default_config[name])
 
     def _get_dir(self, name):
-        return os.path.join(self.curr_coll_dir,
+        return os_path_join(self.curr_coll_dir,
                             self.default_config[name])
 
     def _create_dir(self, dirname):
-        if not os.path.isdir(dirname):
+        if not os_path_isdir(dirname):
             os.mkdir(dirname)
 
         logging.info('Created Directory: ' + dirname)
@@ -112,33 +112,31 @@ directory structure expected by pywb
         self._create_dir(self._get_root_dir('templates_dir'))
 
     def _assert_coll_exists(self):
-        if not os.path.isdir(self.curr_coll_dir):
+        if not os_path_isdir(self.curr_coll_dir):
             msg = ('Collection {0} does not exist. ' +
                    'To create a new collection, run\n\n{1} init {0}')
             raise IOError(msg.format(self.coll_name, sys.argv[0]))
 
     def add_warcs(self, warcs):
-        if not os.path.isdir(self.archive_dir):
+        if not os_path_isdir(self.archive_dir):
             raise IOError('Directory {0} does not exist'.
                           format(self.archive_dir))
 
         full_paths = []
         for filename in warcs:
-            filename = os.path.abspath(filename)
-            shutil.copy2(filename, self.archive_dir)
-            full_paths.append(os.path.join(self.archive_dir, filename))
+            filename = os_path_abspath(filename)
+            shutil_copy2(filename, self.archive_dir)
+            full_paths.append(os_path_join(self.archive_dir, filename))
             logging.info('Copied ' + filename + ' to ' + self.archive_dir)
 
         self._index_merge_warcs(full_paths, self.DEF_INDEX_FILE)
 
     def reindex(self):
-        cdx_file = os.path.join(self.indexes_dir, self.DEF_INDEX_FILE)
+        cdx_file = os_path_join(self.indexes_dir, self.DEF_INDEX_FILE)
         logging.info('Indexing ' + self.archive_dir + ' to ' + cdx_file)
         self._cdx_index(cdx_file, [self.archive_dir])
 
     def _cdx_index(self, out, input_, rel_root=None):
-        from pywb.indexer.cdxindexer import write_multi_cdx_index
-
         options = dict(append_post=True,
                        cdxj=True,
                        sort=True,
@@ -154,10 +152,10 @@ directory structure expected by pywb
         filtered_warcs = []
 
         # Check that warcs are actually in archive dir
-        abs_archive_dir = os.path.abspath(self.archive_dir)
+        abs_archive_dir = os_path_abspath(self.archive_dir)
 
         for f in filelist:
-            abs_filepath = os.path.abspath(f)
+            abs_filepath = os_path_abspath(f)
             prefix = os.path.commonprefix([abs_archive_dir, abs_filepath])
 
             if prefix != abs_archive_dir:
@@ -170,7 +168,7 @@ directory structure expected by pywb
         self._index_merge_warcs(filtered_warcs, index_file, abs_archive_dir)
 
     def _index_merge_warcs(self, new_warcs, index_file, rel_root=None):
-        cdx_file = os.path.join(self.indexes_dir, index_file)
+        cdx_file = os_path_join(self.indexes_dir, index_file)
 
         temp_file = cdx_file + '.tmp.' + timestamp20_now()
         self._cdx_index(temp_file, new_warcs, rel_root)
@@ -187,7 +185,7 @@ directory structure expected by pywb
         with open(cdx_file, 'rb') as orig_index:
             with open(temp_file, 'rb') as new_index:
                 with open(merged_file, 'w+b') as merged:
-                    for line in heapq.merge(orig_index, new_index):
+                    for line in heapq_merge(orig_index, new_index):
                         if last_line != line:
                             merged.write(line)
                             last_line = line
@@ -197,7 +195,7 @@ directory structure expected by pywb
         os.remove(temp_file)
 
     def set_metadata(self, namevalue_pairs):
-        metadata_yaml = os.path.join(self.curr_coll_dir, 'metadata.yaml')
+        metadata_yaml = os_path_join(self.curr_coll_dir, 'metadata.yaml')
         metadata = None
         if os.path.isfile(metadata_yaml):
             with open(metadata_yaml, 'rb') as fh:
@@ -227,7 +225,7 @@ directory structure expected by pywb
         templates = defaults['html_templates']
 
         for name in templates:
-            defaults[name] = os.path.join(temp_dir, defaults[name])
+            defaults[name] = os_path_join(temp_dir, defaults[name])
 
         return defaults, templates
 
@@ -258,9 +256,9 @@ directory structure expected by pywb
         try:
             filename = defaults[template_name]
             if not self.coll_name:
-                full_path = os.path.join(os.getcwd(), filename)
+                full_path = os_path_join(os.getcwd(), filename)
             else:
-                full_path = os.path.join(self.templates_dir,
+                full_path = os_path_join(self.templates_dir,
                                          os.path.basename(filename))
 
         except KeyError:
@@ -284,7 +282,7 @@ directory structure expected by pywb
         with open(full_path, 'w+b') as fh:
             fh.write(data)
 
-        full_path = os.path.abspath(full_path)
+        full_path = os_path_abspath(full_path)
         msg = 'Copied default template "{0}" to "{1}"'
         print(msg.format(filename, full_path))
 

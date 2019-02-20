@@ -672,8 +672,9 @@ class MetadataCache(object):
         :return: A dictionary containing each collections metadata
         :rtype: dict
         """
+        self_load = self.load
         for route in routes:
-            self.load(route)
+            self_load(route)
 
         return {name: value[1] for name, value in iteritems(self.cache)}
 

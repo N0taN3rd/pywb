@@ -1,8 +1,11 @@
-import gevent
-import time
-import re
-import os
 import logging
+import os
+import re
+import time
+from os import listdir as os_listdir, makedirs as os_makedirs, walk as os_walk
+from os.path import isdir as os_path_isdir, isfile as os_path_isfile, join as os_path_join
+
+import gevent
 
 from pywb.manager.manager import CollectionsManager
 
@@ -51,37 +54,42 @@ class AutoIndexer(object):
         logging.info('...Done')
 
     def check_path(self):
-        for coll in os.listdir(self.root_path):
-            coll_dir = os.path.join(self.root_path, coll)
-            if not os.path.isdir(coll_dir):
+        for coll in os_listdir(self.root_path):
+            coll_dir = os_path_join(self.root_path, coll)
+            if not os_path_isdir(coll_dir):
                 continue
 
             self.manager.change_collection(coll)
 
             archive_dir = self.manager.archive_dir
 
-            if not os.path.isdir(archive_dir):
+            if not os_path_isdir(archive_dir):
                 continue
 
-            index_file = os.path.join(self.manager.indexes_dir, self.AUTO_INDEX_FILE)
+            index_file = os_path_join(self.manager.indexes_dir, self.AUTO_INDEX_FILE)
 
-            if not os.path.isfile(index_file):
+            if not os_path_isfile(index_file):
                 try:
-                    os.makedirs(self.manager.indexes_dir)
+                    os_makedirs(self.manager.indexes_dir)
                 except Exception as e:
                     pass
 
             logging.info('Checking Collection: ' + coll)
             to_index = []
-            for dirpath, dirnames, filenames in os.walk(archive_dir):
+            to_index_append = to_index.append
+
+            self_EXT_RX_match = self.EXT_RX.match
+            self_is_newer_than = self.is_newer_than
+
+            for dirpath, dirnames, filenames in os_walk(archive_dir):
                 for filename in filenames:
-                    if not self.EXT_RX.match(filename):
+                    if not self_EXT_RX_match(filename):
                         continue
 
-                    full_filename = os.path.join(dirpath, filename)
+                    full_filename = os_path_join(dirpath, filename)
 
-                    if self.is_newer_than(full_filename, index_file, True):
-                        to_index.append(full_filename)
+                    if self_is_newer_than(full_filename, index_file, True):
+                        to_index_append(full_filename)
 
             if to_index:
                 self.do_index(to_index)

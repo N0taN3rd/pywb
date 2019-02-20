@@ -88,20 +88,26 @@ class DefaultHeaderRewriter(object):
 
     def __call__(self):
         new_headers_list = []
+
+        self_header_rules_get = self.header_rules.get
+        self_rewrite_header = self.rewrite_header
+        new_headers_list_extend = new_headers_list.extend
+        new_headers_list_append = new_headers_list.append
+
         for name, value in self.http_headers.headers:
-            rule = self.header_rules.get(name.lower())
-            new_header = self.rewrite_header(name, value, rule)
+            rule = self_header_rules_get(name.lower())
+            new_header = self_rewrite_header(name, value, rule)
             if new_header:
                 if isinstance(new_header, list):
-                    new_headers_list.extend(new_header)
+                    new_headers_list_extend(new_header)
                 else:
-                    new_headers_list.append(new_header)
+                    new_headers_list_append(new_header)
 
         if self.rwinfo.url_rewriter.wburl.mod == 'sw_':
             parts = urlsplit(self.rwinfo.url_rewriter.wburl.url)
             new_url = parts.scheme + '://' + parts.netloc + '/'
             rw_origin = self.rwinfo.url_rewriter.rewrite(new_url, mod='mp_')
-            new_headers_list.append(('Service-Worker-Allowed', rw_origin))
+            new_headers_list_append(('Service-Worker-Allowed', rw_origin))
 
         return StatusAndHeaders(self.http_headers.statusline,
                                 headers=new_headers_list,

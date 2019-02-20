@@ -1,4 +1,5 @@
 from warcio.timeutils import timestamp_to_datetime, datetime_to_iso_date
+from re import compile as re_compile
 import re
 
 
@@ -79,11 +80,12 @@ class CollectionFilter(SkipDefaultFilter):
         self.rx_accept_map = {}
 
         if isinstance(accept_colls, str):
-            self.rx_accept_map = {'*': re.compile(accept_colls)}
+            self.rx_accept_map = {'*': re_compile(accept_colls)}
 
         elif isinstance(accept_colls, dict):
+            self_rx_accept_map = self.rx_accept_map
             for name in accept_colls:
-                self.rx_accept_map[name] = re.compile(accept_colls[name])
+                self_rx_accept_map[name] = re_compile(accept_colls[name])
 
     def skip_response(self, path, req_headers, resp_headers, params):
         if super(CollectionFilter, self).skip_response(path, req_headers,

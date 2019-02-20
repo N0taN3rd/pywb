@@ -33,11 +33,13 @@ class BaseContentRewriter(object):
         return self.all_rewriters.get(rw_type)
 
     def load_rules(self, filename):
+        self_parse_rewrite_rule = self.parse_rewrite_rule
+        self_rules_append = self.rules.append
         config = load_yaml_config(filename)
         for rule in config.get('rules'):
-            rule = self.parse_rewrite_rule(rule)
+            rule = self_parse_rewrite_rule(rule)
             if rule:
-                self.rules.append(rule)
+                self_rules_append(rule)
 
     def parse_rewrite_rule(self, config):
         rw_config = config.get('rewrite')
@@ -64,9 +66,9 @@ class BaseContentRewriter(object):
 
     def get_rule(self, cdx):
         urlkey = to_native_str(cdx['urlkey'])
-
+        urlkey_startswith = urlkey.startswith
         for rule in self.rules:
-            if any((urlkey.startswith(prefix) for prefix in rule['url_prefix'])):
+            if any((urlkey_startswith(prefix) for prefix in rule['url_prefix'])):
                 return rule
 
         return {}

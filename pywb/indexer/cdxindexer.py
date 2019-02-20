@@ -1,5 +1,7 @@
 import os
 import sys
+from os import listdir as os_listdir, walk as os_walk
+from os.path import basename as os_path_basename, isdir as os_path_isdir, join as os_path_join
 
 # Use ujson if available
 try:
@@ -83,8 +85,10 @@ class CDXJ(object):
 
         outdict = OrderedDict()
 
+        CDXJ_SKIPPED_CDXJ_KEYS = CDXJ.SKIPPED_CDXJ_KEYS
+
         for n, v in six.iteritems(entry):
-            if n in CDXJ.SKIPPED_CDXJ_KEYS:
+            if n in CDXJ_SKIPPED_CDXJ_KEYS:
                 continue
 
             if n.startswith('_'):
@@ -220,27 +224,27 @@ def _resolve_rel_path(path, rel_root):
 # =================================================================
 def iter_file_or_dir(inputs, recursive=True, rel_root=None):
     for input_ in inputs:
-        if not os.path.isdir(input_):
+        if not os_path_isdir(input_):
             if not rel_root:
-                filename = os.path.basename(input_)
+                filename = os_path_basename(input_)
             else:
                 filename = _resolve_rel_path(input_, rel_root)
 
             yield input_, filename
 
         elif not recursive:
-            for filename in os.listdir(input_):
+            for filename in os_listdir(input_):
                 if filename.endswith(ALLOWED_EXT):
-                    full_path = os.path.join(input_, filename)
+                    full_path = os_path_join(input_, filename)
                     if rel_root:
                         filename = _resolve_rel_path(full_path, rel_root)
                     yield full_path, filename
 
         else:
-            for root, dirs, files in os.walk(input_):
+            for root, dirs, files in os_walk(input_):
                 for filename in files:
                     if filename.endswith(ALLOWED_EXT):
-                        full_path = os.path.join(root, filename)
+                        full_path = os_path_join(root, filename)
                         if not rel_root:
                             rel_root = input_
                         rel_path = _resolve_rel_path(full_path, rel_root)
@@ -249,8 +253,9 @@ def iter_file_or_dir(inputs, recursive=True, rel_root=None):
 
 # =================================================================
 def remove_ext(filename):
+    filename_endswith = filename.endswith
     for ext in ALLOWED_EXT:
-        if filename.endswith(ext):
+        if filename_endswith(ext):
             filename = filename[:-len(ext)]
             break
 
@@ -295,12 +300,12 @@ def write_multi_cdx_index(output, inputs, **options):
     rel_root = options.get('rel_root')
 
     # write one cdx per dir
-    if output != '-' and os.path.isdir(output):
+    if output != '-' and os_path_isdir(output):
         for fullpath, filename in iter_file_or_dir(inputs,
                                                    recurse,
                                                    rel_root):
             outpath = cdx_filename(filename)
-            outpath = os.path.join(output, outpath)
+            outpath = os_path_join(output, outpath)
 
             with open(outpath, 'wb') as outfile:
                 with open(fullpath, 'rb') as infile:
@@ -320,6 +325,7 @@ def write_multi_cdx_index(output, inputs, **options):
         record_iter = DefaultRecordParser(**options)
 
         with writer_cls(outfile) as writer:
+            writer_write = writer.write
             for fullpath, filename in iter_file_or_dir(inputs,
                                                        recurse,
                                                        rel_root):
@@ -327,7 +333,7 @@ def write_multi_cdx_index(output, inputs, **options):
                     entry_iter = record_iter(infile)
 
                     for entry in entry_iter:
-                        writer.write(entry, filename)
+                        writer_write(entry, filename)
 
         return writer
 
@@ -339,10 +345,11 @@ def write_cdx_index(outfile, infile, filename, **options):
     writer_cls = get_cdx_writer_cls(options)
 
     with writer_cls(outfile) as writer:
+        writer_write = writer.write
         entry_iter = DefaultRecordParser(**options)(infile)
 
         for entry in entry_iter:
-            writer.write(entry, filename)
+            writer_write(entry, filename)
 
     return writer
 

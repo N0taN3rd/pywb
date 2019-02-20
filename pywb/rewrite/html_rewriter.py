@@ -115,6 +115,13 @@ class HTMLRewriterMixin(StreamingRewriter):
         'track': 'oe_',
     }
 
+    META_REFRESH_REGEX = re.compile('^[\\d.]+\\s*;\\s*url\\s*=\\s*(.+?)\\s*$',
+                                    re.IGNORECASE | re.MULTILINE)
+
+    ADD_WINDOW = re.compile('(?<![.])(WB_wombat_)')
+
+    SRCSET_REGEX = re.compile(r'\s*(\S*\s+[\d.]+[wx]),|(?:\s*,(?:\s+|(?=https?:)))')
+
     # ===========================
     def __init__(self, url_rewriter,
                  head_insert=None,
@@ -161,10 +168,6 @@ class HTMLRewriterMixin(StreamingRewriter):
         self.has_base = False
 
     # ===========================
-    META_REFRESH_REGEX = re.compile('^[\\d.]+\\s*;\\s*url\\s*=\\s*(.+?)\\s*$',
-                                    re.IGNORECASE | re.MULTILINE)
-
-    ADD_WINDOW = re.compile('(?<![.])(WB_wombat_)')
 
     def _rewrite_meta_refresh(self, meta_refresh):
         if not meta_refresh:
@@ -276,14 +279,13 @@ class HTMLRewriterMixin(StreamingRewriter):
 
         return new_value
 
-    SRCSET_REGEX = re.compile('\s*(\S*\s+[\d\.]+[wx]),|(?:\s*,(?:\s+|(?=https?:)))')
-
     def _rewrite_srcset(self, value, mod=''):
         if not value:
             return ''
 
+        self_rewrite_url = self._rewrite_url
         values = (url.strip() for url in re.split(self.SRCSET_REGEX, value) if url)
-        values = [self._rewrite_url(v.strip()) for v in values]
+        values = [self_rewrite_url(v.strip()) for v in values]
         return ', '.join(values)
 
     def _rewrite_css(self, css_content):
@@ -351,93 +353,106 @@ class HTMLRewriterMixin(StreamingRewriter):
 
         self.out.write('<' + tag)
 
+        self_perform_tag_attrs_rewrite = self._perform_tag_attrs_rewrite
+
         for attr_name, attr_value in tag_attrs:
-            empty_attr = False
-            if attr_value is None:
-                attr_value = ''
-                empty_attr = True
-
-            # special case: inline JS/event handler
-            if ((attr_value and attr_value.startswith('javascript:'))
-                    or attr_name.startswith('on') and attr_name[2:3] != '-'):
-                attr_value = self._rewrite_script(attr_value, True)
-
-            # special case: inline CSS/style attribute
-            elif attr_name == 'style':
-                attr_value = self._rewrite_css(attr_value)
-
-            # special case: deprecated background attribute
-            elif attr_name == 'background':
-                rw_mod = 'im_'
-                attr_value = self._rewrite_url(attr_value, rw_mod)
-
-            # special case: srcset list
-            elif attr_name == 'srcset':
-                rw_mod = handler.get(attr_name, '')
-                attr_value = self._rewrite_srcset(attr_value, rw_mod)
-
-            # special case: disable crossorigin and integrity attr
-            # as they may interfere with rewriting semantics
-            elif attr_name in ('crossorigin', 'integrity'):
-                attr_name = '_' + attr_name
-
-            # special case: if rewrite_canon not set,
-            # don't rewrite rel=canonical
-            elif tag == 'link' and attr_name == 'href':
-                rw_mod = handler.get(attr_name)
-                attr_value = self._rewrite_link_href(attr_value, tag_attrs, rw_mod)
-
-            # special case: meta tag
-            elif (tag == 'meta') and (attr_name == 'content'):
-                if self.has_attr(tag_attrs, ('http-equiv', 'refresh')):
-                    attr_value = self._rewrite_meta_refresh(attr_value)
-                elif self.has_attr(tag_attrs, ('http-equiv', 'content-security-policy')):
-                    attr_name = '_' + attr_name
-                elif self.has_attr(tag_attrs, ('name', 'referrer')):
-                    attr_value = 'no-referrer-when-downgrade'
-                elif attr_value.startswith(self.DATA_RW_PROTOCOLS):
-                    rw_mod = handler.get(attr_name)
-                    attr_value = self._rewrite_url(attr_value, rw_mod)
-
-            # special case: param value, conditional rewrite
-            elif tag == 'param':
-                if attr_value.startswith(self.DATA_RW_PROTOCOLS):
-                    rw_mod = handler.get(attr_name)
-                    attr_value = self._rewrite_url(attr_value, rw_mod)
-
-            # special case: data- attrs, conditional rewrite
-            elif attr_name and attr_value and attr_name.startswith('data-'):
-                if attr_value.startswith(self.DATA_RW_PROTOCOLS):
-                    rw_mod = 'oe_'
-                    attr_value = self._rewrite_url(attr_value, rw_mod)
-
-            # special case: base tag
-            elif (tag == 'base') and (attr_name == 'href') and attr_value:
-                rw_mod = handler.get(attr_name)
-                attr_value = self._rewrite_base(attr_value, rw_mod)
-
-            elif attr_name == 'href':
-                rw_mod = self.defmod
-                attr_value = self._rewrite_url(attr_value, rw_mod)
-
-            elif tag == 'script' and attr_name == 'src':
-                rw_mod = handler.get(attr_name)
-                ov = attr_value
-                attr_value = self._rewrite_url(attr_value, rw_mod)
-                if attr_value == ov and not ov.startswith(self.url_rewriter.NO_REWRITE_URI_PREFIX):
-                    # URL not skipped, likely src='js/....', forcing abs to make sure, cause PHP MIME(JS) === HTML
-                    attr_value = self._rewrite_url(attr_value, rw_mod, True)
-                    self._write_attr('__wb_orig_src', ov, empty_attr=None)
-            else:
-                # rewrite url using tag handler
-                rw_mod = handler.get(attr_name)
-                if rw_mod is not None:
-                    attr_value = self._rewrite_url(attr_value, rw_mod)
-
-            # write the attr!
-            self._write_attr(attr_name, attr_value, empty_attr)
+            self_perform_tag_attrs_rewrite(handler, tag, tag_attrs, attr_name, attr_value)
 
         return True
+
+    def _perform_tag_attrs_rewrite(self, handler, tag, tag_attrs, attr_name, attr_value):
+        """Performs the actual rewriting of a tags attributes.
+
+        :param dict[str, str] handler: The modifier handler for the tag being rewritten
+        :param str tag: The name of the tag being rewritten
+        :param list[tuple[str, str]] tag_attrs: A list of tuples representing the tags attributes
+        :param str attr_name: - The name of the attribute being rewritten
+        :param str attr_value: - The value of the attribute being rewritten
+        """
+        empty_attr = False
+        if attr_value is None:
+            attr_value = ''
+            empty_attr = True
+
+        # special case: inline JS/event handler
+        if ((attr_value and attr_value.startswith('javascript:'))
+                or attr_name.startswith('on') and attr_name[2:3] != '-'):
+            attr_value = self._rewrite_script(attr_value, True)
+
+        # special case: inline CSS/style attribute
+        elif attr_name == 'style':
+            attr_value = self._rewrite_css(attr_value)
+
+        # special case: deprecated background attribute
+        elif attr_name == 'background':
+            rw_mod = 'im_'
+            attr_value = self._rewrite_url(attr_value, rw_mod)
+
+        # special case: srcset list
+        elif attr_name == 'srcset':
+            rw_mod = handler.get(attr_name, '')
+            attr_value = self._rewrite_srcset(attr_value, rw_mod)
+
+        # special case: disable crossorigin and integrity attr
+        # as they may interfere with rewriting semantics
+        elif attr_name in ('crossorigin', 'integrity'):
+            attr_name = '_' + attr_name
+
+        # special case: if rewrite_canon not set,
+        # don't rewrite rel=canonical
+        elif tag == 'link' and attr_name == 'href':
+            rw_mod = handler.get(attr_name)
+            attr_value = self._rewrite_link_href(attr_value, tag_attrs, rw_mod)
+
+        # special case: meta tag
+        elif (tag == 'meta') and (attr_name == 'content'):
+            if self.has_attr(tag_attrs, ('http-equiv', 'refresh')):
+                attr_value = self._rewrite_meta_refresh(attr_value)
+            elif self.has_attr(tag_attrs, ('http-equiv', 'content-security-policy')):
+                attr_name = '_' + attr_name
+            elif self.has_attr(tag_attrs, ('name', 'referrer')):
+                attr_value = 'no-referrer-when-downgrade'
+            elif attr_value.startswith(self.DATA_RW_PROTOCOLS):
+                rw_mod = handler.get(attr_name)
+                attr_value = self._rewrite_url(attr_value, rw_mod)
+
+        # special case: param value, conditional rewrite
+        elif tag == 'param':
+            if attr_value.startswith(self.DATA_RW_PROTOCOLS):
+                rw_mod = handler.get(attr_name)
+                attr_value = self._rewrite_url(attr_value, rw_mod)
+
+        # special case: data- attrs, conditional rewrite
+        elif attr_name and attr_value and attr_name.startswith('data-'):
+            if attr_value.startswith(self.DATA_RW_PROTOCOLS):
+                rw_mod = 'oe_'
+                attr_value = self._rewrite_url(attr_value, rw_mod)
+
+        # special case: base tag
+        elif (tag == 'base') and (attr_name == 'href') and attr_value:
+            rw_mod = handler.get(attr_name)
+            attr_value = self._rewrite_base(attr_value, rw_mod)
+
+        elif attr_name == 'href':
+            rw_mod = self.defmod
+            attr_value = self._rewrite_url(attr_value, rw_mod)
+
+        elif tag == 'script' and attr_name == 'src':
+            rw_mod = handler.get(attr_name)
+            ov = attr_value
+            attr_value = self._rewrite_url(attr_value, rw_mod)
+            if attr_value == ov and not ov.startswith(self.url_rewriter.NO_REWRITE_URI_PREFIX):
+                # URL not skipped, likely src='js/....', forcing abs to make sure, cause PHP MIME(JS) === HTML
+                attr_value = self._rewrite_url(attr_value, rw_mod, True)
+                self._write_attr('__wb_orig_src', ov, empty_attr=None)
+        else:
+            # rewrite url using tag handler
+            rw_mod = handler.get(attr_name)
+            if rw_mod is not None:
+                attr_value = self._rewrite_url(attr_value, rw_mod)
+
+        # write the attr!
+        self._write_attr(attr_name, attr_value, empty_attr)
 
     def _rewrite_link_href(self, attr_value, tag_attrs, rw_mod):
         # rel="canonical"

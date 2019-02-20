@@ -2,6 +2,7 @@ import base64
 import datetime
 import os
 import shutil
+from os.path import getmtime as os_path_getmtime
 
 import traceback
 
@@ -235,8 +236,9 @@ class MultiFileWARCWriter(BaseWARCWriter):
             yield n, out, filename
 
     def close(self):
+        self_close_file = self._close_file
         for dir_key, out, filename in self.iter_open_files():
-            self._close_file(out)
+            self_close_file(out)
 
         self.fh_cache = {}
 
@@ -245,19 +247,23 @@ class MultiFileWARCWriter(BaseWARCWriter):
             return
 
         now = datetime.datetime.now()
+        datetime_fromtimestamp = datetime.datetime.fromtimestamp
+        self_close_key = self.close_key
+
+        self_max_idle_time = self.max_idle_time
 
         for dir_key, out, filename in self.iter_open_files():
             try:
-                mtime = os.path.getmtime(filename)
+                mtime = os_path_getmtime(filename)
             except Exception:
-                self.close_key(dir_key)
+                self_close_key(dir_key)
                 return
 
-            mtime = datetime.datetime.fromtimestamp(mtime)
+            mtime = datetime_fromtimestamp(mtime)
 
-            if (now - mtime) > self.max_idle_time:
+            if (now - mtime) > self_max_idle_time:
                 print('Closing idle ' + filename)
-                self.close_key(dir_key)
+                self_close_key(dir_key)
 
 
 # ============================================================================

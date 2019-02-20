@@ -262,24 +262,30 @@ class LiveWebLoader(BaseLoader):
                                                        status=upstream_res.status,
                                                        reason=upstream_res.reason)
         orig_resp = upstream_res._original_response
+        self_SKIP_HEADERS = self.SKIP_HEADERS
+        self_UNREWRITE_HEADERS = self.UNREWRITE_HEADERS
+        self_unrewrite_header = self.unrewrite_header
 
         try:  # pragma: no cover
             http_headers_buff = [status]
             # PY 3
             resp_headers = orig_resp.headers._headers
+
+            http_headers_buff_append = http_headers_buff.append
+
             for n, v in resp_headers:
                 nl = n.lower()
-                if nl in self.SKIP_HEADERS:
+                if nl in self_SKIP_HEADERS:
                     continue
-                http_headers_buff.append(n)
-                http_headers_buff.append(': ')
-                if nl in self.UNREWRITE_HEADERS:
-                    http_headers_buff.append(self.unrewrite_header(cdx, v))
+                http_headers_buff_append(n)
+                http_headers_buff_append(': ')
+                if nl in self_UNREWRITE_HEADERS:
+                    http_headers_buff_append(self_unrewrite_header(cdx, v))
                 else:
-                    http_headers_buff.append(v)
-                http_headers_buff.append('\r\n')
+                    http_headers_buff_append(v)
+                http_headers_buff_append('\r\n')
 
-            http_headers_buff.append('\r\n')
+            http_headers_buff_append('\r\n')
 
             try:
                 # http headers could be encoded as utf-8 (though non-standard)
@@ -292,6 +298,7 @@ class LiveWebLoader(BaseLoader):
         except Exception:  # pragma: no cover
             # PY 2
             http_headers_buff = [status]
+            http_headers_buff_append = http_headers_buff.append
             resp_headers = orig_resp.msg.headers
 
             for line in resp_headers:
@@ -299,23 +306,23 @@ class LiveWebLoader(BaseLoader):
                 n = n.lower()
                 v = v.strip()
 
-                if n in self.SKIP_HEADERS:
+                if n in self_SKIP_HEADERS:
                     continue
 
                 new_v = v
-                if n in self.UNREWRITE_HEADERS:
-                    new_v = self.unrewrite_header(cdx, v)
+                if n in self_UNREWRITE_HEADERS:
+                    new_v = self_unrewrite_header(cdx, v)
 
                 if new_v != v:
-                    http_headers_buff.append(n)
-                    http_headers_buff.append(': ')
-                    http_headers_buff.append(new_v)
-                    http_headers_buff.append('\r\n')
+                    http_headers_buff_append(n)
+                    http_headers_buff_append(': ')
+                    http_headers_buff_append(new_v)
+                    http_headers_buff_append('\r\n')
                 else:
-                    http_headers_buff.append(http_headers_buff)
+                    http_headers_buff_append(http_headers_buff)
 
             # if python2, already byte headers, so leave as is
-            http_headers_buff.append('\r\n')
+            http_headers_buff_append('\r\n')
             http_headers = ''.join(http_headers_buff)
 
         return http_headers
